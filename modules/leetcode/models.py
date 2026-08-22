@@ -8,8 +8,7 @@ class QuestionRecord(BaseModel):
     url: str
     difficulty: str | None = None
     category: str | None = None
-    tags: list[str] = []
-    content_html: str | None = None
+    tags: list[dict] = []
+    content_html: str = ""
     content_md: str | None = None
     content_plain: str | None = None
-    is_paid_only: bool = False
