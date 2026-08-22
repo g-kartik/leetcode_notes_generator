@@ -60,7 +60,7 @@ class LeetCodeSyncManager:
             parsed_data = gql_question_data_parser(gql_data)
 
             question_record = QuestionRecord(**parsed_data)
-            question_record.content_plain = html_to_plain_text(
+            question_record.content_txt = html_to_plain_text(
                 question_record.content_html
             )
             question_record.content_md = html_to_markdown(question_record.content_html)

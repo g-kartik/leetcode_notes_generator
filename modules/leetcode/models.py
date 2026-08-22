@@ -11,4 +11,4 @@ class QuestionRecord(BaseModel):
     tags: list[dict] = []
     content_html: str = ""
     content_md: str | None = None
-    content_plain: str | None = None
+    content_txt: str | None = None
