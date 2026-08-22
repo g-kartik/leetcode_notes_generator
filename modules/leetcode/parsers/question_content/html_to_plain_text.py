@@ -1,4 +1,6 @@
-from markdownify import BeautifulSoup
+import html
+
+from bs4 import BeautifulSoup
 
 BLOCK_TAGS = {
     "p",

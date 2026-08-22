@@ -97,3 +97,5 @@ class LeetCodeSyncManager:
         logger.info(
             f"Pipeline finished! Populated details for {populated_count} questions."
         )
+
+leetcode_manager = LeetCodeSyncManager()

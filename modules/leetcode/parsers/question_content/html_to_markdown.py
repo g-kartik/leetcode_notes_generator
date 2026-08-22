@@ -1,40 +1,68 @@
 import html
 import re
 
+from bs4 import BeautifulSoup
 from markdownify import MarkdownConverter
 
 
 class LeetCodeMarkdownConverter(MarkdownConverter):
-    """Custom Markdown converter tailored for LeetCode HTML structures."""
+    """Custom Markdown converter tailored for LeetCode problem descriptions."""
 
-    def convert_sub(self, el, text, convert_as_inline):
-        return f"_{text}"
+    def convert_code(self, el, text, parent_tags):
+        # Prevent double-wrapping if code is inside pre
+        if el.parent and el.parent.name == "pre":
+            return text
+        code_text = text.strip()
+        return f"`{code_text}`" if code_text else ""
 
-    def convert_sup(self, el, text, convert_as_inline):
-        return f"^{text}"
+    def convert_sub(self, el, text, parent_tags):
+        return f"_{text}" if text else ""
 
-    def convert_pre(self, el, text, convert_as_inline):
-        # Wraps example inputs/outputs in standard markdown code fences
-        clean_code = text.strip()
-        return f"\n```\n{clean_code}\n```\n"
+    def convert_sup(self, el, text, parent_tags):
+        return f"^{text}" if text else ""
+
+    def convert_pre(self, el, text, parent_tags):
+        # Extract code block content cleanly
+        code_content = text.strip()
+        return f"\n\n```\n{code_content}\n```\n\n"
+
+    def convert_font(self, el, text, parent_tags):
+        # LeetCode wraps trailing spaces in <font face="monospace">&nbsp;</font>
+        return text
 
 
 def html_to_markdown(raw_html: str) -> str:
-    """Converts LeetCode HTML description into clean Markdown."""
+    """Converts LeetCode question HTML into clean Markdown."""
     if not raw_html:
         return ""
-
     try:
-        unescaped = html.unescape(raw_html)
+        # 1. Unescape HTML entities (&nbsp;, &lt;, &gt;)
+        cleaned_html = html.unescape(raw_html)
+        cleaned_html = cleaned_html.replace("\xa0", " ")  # replace non-breaking spaces
+
+        # 2. Pre-process DOM to clean specific tags before converting
+        soup = BeautifulSoup(cleaned_html, "html.parser")
+
+        # Normalize <sup> and <sub> tags before markdown conversion
+        for sub in soup.find_all("sub"):
+            sub.string = f"_{sub.get_text()}"
+            sub.unwrap()
+        for sup in soup.find_all("sup"):
+            sup.string = f"^{sup.get_text()}"
+            sup.unwrap()
+
+        # 3. Convert modified HTML tree to Markdown
         converter = LeetCodeMarkdownConverter(
             heading_style="ATX",
-            strip=["img", "script", "style"],
             bullets="-",
+            strip=["script", "style"],
         )
-        md = converter.convert(unescaped)
+        md = converter.convert(str(soup))
 
-        # Post-processing: Remove excessive newlines (> 2 breaks)
+        # 4. Post-processing cleanup
+        # Fix multiple blank lines (max 2 newlines)
         md = re.sub(r"\n{3,}", "\n\n", md)
+
         return md.strip()
     except Exception:
         return raw_html
