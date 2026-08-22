@@ -1,0 +1,28 @@
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class LeetCodeSettings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        # Automatically maps `session` to `LEETCODE_SESSION`
+        env_prefix="LEETCODE_",
+        extra="ignore",
+    )
+    # Matches LEETCODE_SESSION in .env
+    SESSION: str = Field(..., description="LeetCode session cookie")
+
+    # Matches LEETCODE_CSRF_TOKEN in .env
+    CSRF_TOKEN: str = Field(..., description="LeetCode CSRF token")
+
+    BASE_URL: str = "https://leetcode.com"
+
+    ENDPOINT_ALL_PROBLEMS: str = f"{BASE_URL}/api/problems/all/"
+
+
+
+
+
+# Module-level single instance or lazy evaluation
+leetcode_settings = LeetCodeSettings()
