@@ -55,7 +55,7 @@ class LeetCodeClient:
             domain="leetcode.com",
         )
 
-    def get_solved_questions_slugs(self) -> list[dict]:
+    def get_solved_questions_slugs(self) -> list[str]:
         """Fetches all solved problems ('ac' status) from the REST API endpoint."""
 
         url = self.settings.ENDPOINT_ALL_PROBLEMS
