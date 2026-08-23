@@ -25,30 +25,25 @@ class LeetCodeSyncManager:
         logger.info("Fetching solved questions list from LeetCode...")
         solved_problem_slugs = self.client.get_solved_questions_slugs()
 
-        new_slugs_count = 0
         new_slugs = []
 
         for slug in solved_problem_slugs:
             if not self.storage.exists(slug):
-                self.storage.add_data_entry(slug)
                 new_slugs.append(slug)
-                new_slugs_count += 1
-
-        for new_slug in new_slugs:
-            logger.info(f"New solved question: {new_slug}")
+                logger.info(f"New solved question found: {slug}")
 
         logger.info(
-            f"Sync complete: {len(solved_problem_slugs)} solved total, {new_slugs_count} data entries created."
+            f"Sync complete: {len(solved_problem_slugs)} solved total, {len(new_slugs)} data entries created."
         )
 
         return new_slugs
 
     def populate_question_details(self, slug: str, force_update: bool = False) -> bool:
         """Step 2: Fetches details for a specific slug from GraphQL, parses HTML, and updates the storage record."""
-        problem_data = self.storage.get_by_slug(slug)
+        existing_record = self.storage.get_by_slug(slug)
 
-        if force_update or not problem_data:
-            logger.info(f"Fetching GraphQL details for '{slug}'...")
+        if force_update or not existing_record:
+            logger.info(f"Fetching question details for '{slug}'...")
 
             gql_data = self.client.get_question_details(slug)
             if not gql_data:
@@ -59,7 +54,12 @@ class LeetCodeSyncManager:
 
             parsed_data = gql_question_data_parser(gql_data)
 
-            question_record = QuestionRecord(**parsed_data)
+            if existing_record:
+                # Preserve submission data
+                question_record = QuestionRecord(**parsed_data, submission=existing_record.submission)
+            else:
+                question_record = QuestionRecord(**parsed_data)
+
             question_record.content_txt = html_to_plain_text(
                 question_record.content_html
             )

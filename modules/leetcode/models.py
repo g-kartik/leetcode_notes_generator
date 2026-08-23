@@ -10,14 +10,14 @@ class SubmissionDetails(BaseModel):
 
 
 class QuestionRecord(BaseModel):
-    slug: str
+    slug: str | None = None
     id: int | None = None
-    title: str
-    url: str
+    title: str | None = None
+    url: str | None = None
     difficulty: str | None = None
     category: str | None = None
-    tags: list[dict] = []
-    content_html: str = ""
+    tags: list[dict] | None = None
+    content_html: str | None = None
     content_md: str | None = None
     content_txt: str | None = None
     submission: SubmissionDetails | None = None
