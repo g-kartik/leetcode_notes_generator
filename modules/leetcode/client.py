@@ -6,11 +6,11 @@ from modules.leetcode.settings import leetcode_settings
 
 
 class LeetCodeClient:
-
     def __init__(self, settings=leetcode_settings):
         self.settings = settings
         self.session = requests.Session()
         self._setup_session()
+        self.graphql_url = f"{self.settings.BASE_URL}/graphql"
 
     def _setup_session(self):
         # 1. Automatic Retries on HTTP 429 (Too Many Requests) or Server Errors (5xx)
@@ -74,10 +74,8 @@ class LeetCodeClient:
 
         return solved_problems_slugs
 
-    def get_question_details(self, title_slug: str) -> dict:
+    def get_question_details(self, slug: str) -> dict:
         """Queries LeetCode's GraphQL API to get comprehensive metadata for a specific problem."""
-        url = f"{self.settings.BASE_URL}/graphql"
-
         query = """
         query selectQuestion($titleSlug: String!) {
           question(titleSlug: $titleSlug) {
@@ -95,13 +93,83 @@ class LeetCodeClient:
         }
         """
 
-        payload = {"query": query, "variables": {"titleSlug": title_slug}}
+        payload = {"query": query, "variables": {"titleSlug": slug}}
 
-        response = self.session.post(url, json=payload)
+        response = self.session.post(self.graphql_url, json=payload)
         response.raise_for_status()
 
         result = response.json()
         if "errors" in result:
             raise RuntimeError(f"GraphQL Error: {result['errors']}")
 
-        return result.get("data", {}).get("question", {})
+        return result
+
+    def get_submission_list(self, slug: str, limit: int = 20) -> list[dict]:
+        """Queries LeetCode GraphQL to retrieve the submission history for a given problem."""
+        query = """
+        query submissionList($questionSlug: String!, $limit: Int, $offset: Int) {
+          questionSubmissionList(
+            questionSlug: $questionSlug
+            limit: $limit
+            offset: $offset
+          ) {
+            submissions {
+              id
+              statusDisplay
+              lang
+              timestamp
+            }
+          }
+        }
+        """
+
+        payload = {
+            "query": query,
+            "variables": {
+                "questionSlug": slug,
+                "limit": limit,
+                "offset": 0,
+            },
+        }
+
+        response = self.session.post(self.graphql_url, json=payload)
+        response.raise_for_status()
+
+        result = response.json()
+        if "errors" in result:
+            raise RuntimeError(f"GraphQL Error: {result['errors']}")
+
+        return result
+
+    def get_submission_details(self, submission_id: int) -> dict:
+        """Queries LeetCode GraphQL to get full details and source code for a specific submission ID."""
+        query = """
+        query submissionDetails($submissionId: Int!) {
+          submissionDetails(submissionId: $submissionId) {
+            id
+            code
+            timestamp
+            statusCode
+            lang {
+              name
+              verboseName
+            }
+            runtimeDisplay
+            memoryDisplay
+          }
+        }
+        """
+
+        payload = {
+            "query": query,
+            "variables": {"submissionId": int(submission_id)},
+        }
+
+        response = self.session.post(self.graphql_url, json=payload)
+        response.raise_for_status()
+
+        result = response.json()
+        if "errors" in result:
+            raise RuntimeError(f"GraphQL Error: {result['errors']}")
+
+        return result
