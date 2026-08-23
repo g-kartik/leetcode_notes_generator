@@ -33,13 +33,6 @@ class LeetCodeStorage:
     # CRUD Operations
     # -------------------------------------------------------------------
 
-    def add_data_entry(self, slug: str) -> dict:
-        """Inserts an entry for the question data to be stored against."""
-        data = self._load_raw()
-        data["questions"][slug] = {}
-        self._save_raw(data)
-        return {slug: {}}
-
     def add_or_update(self, record: QuestionRecord | dict) -> QuestionRecord:
         """Inserts or updates a question using the slug as the key."""
         if isinstance(record, dict):
@@ -114,15 +107,3 @@ class LeetCodeStorage:
         """Returns total number of stored questions."""
         data = self._load_raw()
         return len(data["questions"])
-
-    def unfetched_data_slugs(self) -> list[str]:
-        """Returns all the slugs for which data is not fetched yet(only data entires)."""
-        data = self._load_raw()
-
-        empty_data_slugs = []
-        for slug, question_data in data.get("questions", {}).items():
-            if not question_data:
-                empty_data_slugs.append(slug)
-
-        return empty_data_slugs
-            
