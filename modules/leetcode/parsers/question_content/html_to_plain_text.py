@@ -53,7 +53,7 @@ def _normalize_whitespace(text: str) -> str:
     return "\n".join(cleaned).strip()
 
 
-def html_to_plain_text(raw_html: str) -> str:
+def html_to_plain_text(raw_html: str | None) -> str:
     """Main parser pipeline converting LeetCode question HTML into clean plain text."""
     if not raw_html:
         return ""

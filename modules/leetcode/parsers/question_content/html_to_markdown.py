@@ -31,7 +31,7 @@ class LeetCodeMarkdownConverter(MarkdownConverter):
         return text
 
 
-def html_to_markdown(raw_html: str) -> str:
+def html_to_markdown(raw_html: str | None) -> str:
     """Converts LeetCode question HTML into clean Markdown."""
     if not raw_html:
         return ""
