@@ -4,6 +4,7 @@ from modules.leetcode.models import QuestionRecord, SubmissionDetails
 
 from . import parsers
 from .client import LeetCodeClient
+from .image_processor import LeetCodeImageProcessor
 from .storage import LeetCodeStorage
 
 logger = logging.getLogger(__name__)
@@ -14,9 +15,11 @@ class LeetCodeSyncManager:
         self,
         client: LeetCodeClient | None = None,
         storage: LeetCodeStorage | None = None,
+        image_processor: LeetCodeImageProcessor | None = None,
     ):
         self.client = client or LeetCodeClient()
         self.storage = storage or LeetCodeStorage()
+        self.image_processor = image_processor or LeetCodeImageProcessor()
 
     def sync_solved_questions_data_entry(self) -> list[str]:
         """Step 1: Fetches all solved slugs from LeetCode API and add empty data set against it"""
@@ -60,12 +63,25 @@ class LeetCodeSyncManager:
             else:
                 question_record = QuestionRecord(**parsed_data)
 
-            question_record.content_txt = parsers.html_to_plain_text(
-                question_record.content_html
+            question_record.content.text = parsers.html_to_plain_text(
+                question_record.raw_question_html
             )
-            question_record.content_md = parsers.html_to_markdown(
-                question_record.content_html
+            question_record.content.remote_markdown = parsers.html_to_markdown(
+                question_record.raw_question_html
             )
+
+            image_result = self.image_processor.process_question_images(
+                question_record=question_record
+            )
+
+            if image_result:
+                question_record.imgs_local_paths = image_result.get("imgs_local_paths")
+                question_record.content.local_html = image_result.get(
+                    "content_local_html"
+                )
+                question_record.content.local_markdown = parsers.html_to_markdown(
+                    image_result.get("content_local_html")
+                )
 
             self.storage.add_or_update(question_record)
 

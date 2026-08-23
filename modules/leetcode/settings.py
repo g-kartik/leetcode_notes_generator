@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -20,8 +22,7 @@ class LeetCodeSettings(BaseSettings):
 
     ENDPOINT_ALL_PROBLEMS: str = f"{BASE_URL}/api/problems/all/"
 
-
-
+    PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent.parent
 
 
 # Module-level single instance or lazy evaluation

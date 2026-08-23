@@ -9,8 +9,9 @@ class LeetCodeClient:
     def __init__(self, settings=leetcode_settings):
         self.settings = settings
         self.session = requests.Session()
-        self._setup_session()
         self.graphql_url = f"{self.settings.BASE_URL}/graphql"
+
+        self._setup_session()
 
     def _setup_session(self):
         # 1. Automatic Retries on HTTP 429 (Too Many Requests) or Server Errors (5xx)

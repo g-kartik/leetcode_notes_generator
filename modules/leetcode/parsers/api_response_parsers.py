@@ -7,7 +7,7 @@ def gql_question_data(response_data: dict) -> dict:
     # Contains raw leetcode question in html format
     question_data = response_data.get("data", {}).get("question", {})
 
-    raw_html_question = question_data.get("content", "")
+    raw_question_html = question_data.get("content", "")
 
     # Contains tag contains normal tag and slugified version (name, slug) vars.
     topic_tags = question_data.get("topicTags", [])
@@ -27,7 +27,7 @@ def gql_question_data(response_data: dict) -> dict:
         "tags": topic_tags,
         "category": category,
         "difficulty": difficulty,
-        "content_html": raw_html_question,
+        "raw_question_html": raw_question_html,
     }
 
 
