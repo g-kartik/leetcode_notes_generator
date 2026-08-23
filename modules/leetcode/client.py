@@ -104,7 +104,7 @@ class LeetCodeClient:
 
         return result
 
-    def get_submission_list(self, slug: str, limit: int = 20) -> list[dict]:
+    def get_submission_list(self, slug: str, limit: int = 20) -> dict:
         """Queries LeetCode GraphQL to retrieve the submission history for a given problem."""
         query = """
         query submissionList($questionSlug: String!, $limit: Int, $offset: Int) {

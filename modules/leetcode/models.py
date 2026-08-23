@@ -6,7 +6,7 @@ from pydantic import BaseModel
 class SubmissionDetails(BaseModel):
     lang: str
     code: str
-    submitted_date: datetime
+    submission_date: datetime
 
 
 class QuestionRecord(BaseModel):
