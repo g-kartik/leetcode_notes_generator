@@ -1,11 +1,9 @@
 import logging
 
-from modules.leetcode.models import QuestionRecord
+from modules.leetcode.models import QuestionRecord, SubmissionDetails
 
+from . import parsers
 from .client import LeetCodeClient
-from .parsers.question_content.html_to_markdown import html_to_markdown
-from .parsers.question_content.html_to_plain_text import html_to_plain_text
-from .parsers.question_detail_response import gql_question_data_parser
 from .storage import LeetCodeStorage
 
 logger = logging.getLogger(__name__)
@@ -52,18 +50,22 @@ class LeetCodeSyncManager:
                 )
                 return False
 
-            parsed_data = gql_question_data_parser(gql_data)
+            parsed_data = parsers.gql_question_data(gql_data)
 
             if existing_record:
                 # Preserve submission data
-                question_record = QuestionRecord(**parsed_data, submission=existing_record.submission)
+                question_record = QuestionRecord(
+                    **parsed_data, submission=existing_record.submission
+                )
             else:
                 question_record = QuestionRecord(**parsed_data)
 
-            question_record.content_txt = html_to_plain_text(
+            question_record.content_txt = parsers.html_to_plain_text(
                 question_record.content_html
             )
-            question_record.content_md = html_to_markdown(question_record.content_html)
+            question_record.content_md = parsers.html_to_markdown(
+                question_record.content_html
+            )
 
             self.storage.add_or_update(question_record)
 
@@ -74,6 +76,51 @@ class LeetCodeSyncManager:
         logger.info(
             (
                 f"We already have data for this question '{slug}'...",
+                "If you want to update anyway use force_update.",
+            )
+        )
+        return False
+
+    def _get_accepted_submission_id(self, submission_list: list) -> int | None:
+        for submission_data in submission_list:
+            if submission_data.get("statusDisplay") == "Accepted":
+                return submission_data.get("id")
+
+    def populate_latest_accepted_submission_code(
+        self, slug: str, force_update: bool = False
+    ) -> bool:
+        """Step 3: Fetches submission list and stores the latest accepted submission code for a specific slug from GraphQL"""
+        existing_record = self.storage.get_by_slug(slug)
+
+        if force_update or not existing_record or not existing_record.submission:
+            submission_list_result = self.client.get_submission_list(slug)
+            submission_list = parsers.gql_submission_list(submission_list_result)
+            accepted_submission_id = self._get_accepted_submission_id(submission_list)
+
+            if not accepted_submission_id:
+                logger.warning(f"No submissions found for the question slug {slug}")
+                return False
+
+            submission_details_result = self.client.get_submission_details(
+                accepted_submission_id
+            )
+            submission_data = parsers.gql_submission_data(submission_details_result)
+            logger.info(submission_data)
+            submission_record = SubmissionDetails(**submission_data)
+
+            if existing_record:
+                existing_record.submission = submission_record
+                self.storage.add_or_update(existing_record)
+            else:
+                question_record = QuestionRecord(slug=slug, submission=submission_record)
+                self.storage.add_or_update(question_record)
+
+            logger.info(f"Successfully populated submission data for '{slug}'.")
+            return True
+
+        logger.info(
+            (
+                f"We already have submission data for this question '{slug}'...",
                 "If you want to update anyway use force_update.",
             )
         )
@@ -97,5 +144,6 @@ class LeetCodeSyncManager:
         logger.info(
             f"Pipeline finished! Populated details for {populated_count} questions."
         )
+
 
 leetcode_manager = LeetCodeSyncManager()
