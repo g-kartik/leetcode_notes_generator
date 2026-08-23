@@ -112,7 +112,9 @@ class LeetCodeSyncManager:
                 existing_record.submission = submission_record
                 self.storage.add_or_update(existing_record)
             else:
-                question_record = QuestionRecord(slug=slug, submission=submission_record)
+                question_record = QuestionRecord(
+                    slug=slug, submission=submission_record
+                )
                 self.storage.add_or_update(question_record)
 
             logger.info(f"Successfully populated submission data for '{slug}'.")
