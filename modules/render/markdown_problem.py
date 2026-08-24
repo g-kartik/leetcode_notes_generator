@@ -1,30 +1,37 @@
 import shutil
-from enum import StrEnum
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from modules.leetcode.models import QuestionRecord
-from settings import project_settings
 
 from .settings import render_settings
+from modules.leetcode.settings import leetcode_settings
+from .utils import FileVariant as FV
 
 
-class FileVariant(StrEnum):
-    REMOTE = "remote"  # Will use the markdown with remote(internet) image urls
-    LOCAL = "local"  # Will use the markdown with locally saved image urls(local relative paths)
-
-
-class LeetCodeDSAMarkdownRender:
+class LeetCodeDSAProblemMarkdownRender:
     def __init__(
         self,
-        template_dir: str | Path = "templates",
-        variant: FileVariant | str = "remote",
+        variant: FV | str = FV.ALL,
+        output_base: Path | str | None = None,
+        write_to_obsidian_vault: bool = False,
     ):
-        self.template_dir = Path(template_dir)
-        self.project_root = project_settings.PROJECT_ROOT_DIR
+        self.template_dir = render_settings.TEMPLATE_DIR
+        self.project_root = render_settings.PROJECT_ROOT_DIR
         self.obsidian_vault = render_settings.OBSIDIAN_VAULT_DIR
-        self.variant = variant
+        self.dsa_problems_assets_dir = leetcode_settings.DSA_PROBLEMS_ASSETS_DIR
+
+        self.variant = FV(variant) if isinstance(variant, str) else variant
+        self.write_to_obsidian = write_to_obsidian_vault
+
+        # Base dir is caller-supplied, else falls back to the configured default.
+        self.output_base = (
+            Path(output_base)
+            if output_base is not None
+            else render_settings.DEFAULT_WRITE_DIR
+        )
+
         self.env = Environment(
             loader=FileSystemLoader(self.template_dir),
             autoescape=select_autoescape([]),
@@ -32,13 +39,16 @@ class LeetCodeDSAMarkdownRender:
             lstrip_blocks=True,
         )
         self.template = self.env.get_template("leetcode_problem.md.j2")
-        self.obsidian_vault.mkdir(parents=True, exist_ok=True)
 
-    def render(self, record: QuestionRecord) -> str:
-        """Renders a QuestionRecord into an Obsidian Markdown string based on variant."""
+        self.output_base.mkdir(parents=True, exist_ok=True)
+        if self.write_to_obsidian:
+            self.obsidian_vault.mkdir(parents=True, exist_ok=True)
+
+    def render(self, record: QuestionRecord, variant: FV) -> str:
+        """Renders a QuestionRecord into a Markdown string for a specific variant."""
         markdown_content = (
             record.content.remote_markdown
-            if self.variant == FileVariant.REMOTE
+            if variant == FV.REMOTE
             else record.content.local_markdown
         )
         return self.template.render(
@@ -59,54 +69,65 @@ class LeetCodeDSAMarkdownRender:
             c for c in raw_name if c.isalnum() or c in (" ", "-", "_", ".")
         ).rstrip()
 
-    def _save_remote(self, record: QuestionRecord) -> Path:
-        """Saves remote variant markdown directly into vault_dir root."""
+    def _dsa_root(self, base: Path) -> Path:
+        """The fixed internal structure root: <base>/LeetCode/DSA."""
+        return base / "LeetCode" / "DSA"
 
-        remote_dir = self.obsidian_vault / "remote"
+    def _save_remote(self, record: QuestionRecord, base: Path) -> Path:
+        """Writes remote variant into <base>/LeetCode/DSA/remote/<file>.md."""
+        remote_dir = self._dsa_root(base) / "remote"
         remote_dir.mkdir(parents=True, exist_ok=True)
-        filename = self._get_sanitized_filename(record)
-        output_file = remote_dir / filename
 
-        markdown_content = self.render(record)
-        output_file.write_text(markdown_content, encoding="utf-8")
+        output_file = remote_dir / self._get_sanitized_filename(record)
+        output_file.write_text(self.render(record, FV.REMOTE), encoding="utf-8")
         return output_file
 
-    def _save_local(self, record: QuestionRecord) -> Path:
-        """Saves local variant into vault_path/leetcode_problems/local/<slug>/ with copied assets."""
-        # Target path: <vault_dir>/local/<slug>/
+    def _save_local(self, record: QuestionRecord, base: Path) -> Path:
+        """Writes local variant into <base>/LeetCode/DSA/local/<slug>/<file>.md, with assets."""
         if not record.slug:
             raise ValueError("question slug cannot be null")
 
-        target_problem_dir = self.obsidian_vault / "local" / record.slug
+        target_problem_dir = self._dsa_root(base) / "local" / record.slug
         target_problem_dir.mkdir(parents=True, exist_ok=True)
 
-        # Source assets path in project: project_root/leetcode_problems/local/<slug>/assets/
-        source_assets_dir = (
-            Path(self.project_root)
-            / "leetcode_problems"
-            / "local"
-            / record.slug
-            / "assets"
-        )
+        source_assets_dir = self.dsa_problems_assets_dir / record.slug / "assets"
+
         target_assets_dir = target_problem_dir / "assets"
 
-        # Copy assets folder to vault if local assets exist in project root
         if source_assets_dir.exists() and source_assets_dir.is_dir():
             if target_assets_dir.exists():
                 shutil.rmtree(target_assets_dir)
             shutil.copytree(source_assets_dir, target_assets_dir)
 
-        # Write markdown note directly inside problem slug folder
-        filename = self._get_sanitized_filename(record)
-        output_file = target_problem_dir / filename
-
-        markdown_content = self.render(record)
-        output_file.write_text(markdown_content, encoding="utf-8")
+        output_file = target_problem_dir / self._get_sanitized_filename(record)
+        output_file.write_text(self.render(record, FV.LOCAL), encoding="utf-8")
         return output_file
 
-    def save_to_vault(self, record: QuestionRecord) -> Path:
-        """Renders and delegates saving to the appropriate variant handler."""
-        if self.variant == FileVariant.LOCAL:
-            return self._save_local(record)
-        else:
-            return self._save_remote(record)
+    def _save_variant(self, record: QuestionRecord, variant: FV, base: Path) -> Path:
+        return (
+            self._save_local(record, base)
+            if variant == FV.LOCAL
+            else self._save_remote(record, base)
+        )
+
+    def save(self, record: QuestionRecord) -> dict:
+        """
+        Renders and saves `record` to output_base, and additionally to the
+        Obsidian vault if write_to_obsidian=True. Both destinations share the
+        same LeetCode/DSA/<variant>/... internal structure.
+
+        Returns e.g.:
+            {"local": {"output_base": Path(...), "obsidian": Path(...)}}
+        or, when variant is ALL:
+            {"local": {...}, "remote": {...}}
+        """
+        variants = [FV.LOCAL, FV.REMOTE] if self.variant == FV.ALL else [self.variant]
+
+        results = {}
+        for v in variants:
+            targets = {"output_base": self._save_variant(record, v, self.output_base)}
+            if self.write_to_obsidian:
+                targets["obsidian"] = self._save_variant(record, v, self.obsidian_vault)
+            results[v.value if hasattr(v, "value") else str(v)] = targets
+
+        return results
