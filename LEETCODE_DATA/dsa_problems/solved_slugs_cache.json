@@ -868,10 +868,5 @@
     "question": false,
     "images": false,
     "submission": false
-  },
-  "two-sum": {
-    "question": false,
-    "images": false,
-    "submission": false
   }
 }

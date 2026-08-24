@@ -27,6 +27,7 @@ def configure_logging(level: int = logging.INFO) -> None:
 
     # --- Shared pre-processing chain (runs before either renderer) ----
     shared_processors = [
+        structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_log_level,
         structlog.processors.TimeStamper(fmt="iso", utc=True),
         structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
@@ -54,9 +55,7 @@ def configure_logging(level: int = logging.INFO) -> None:
 
     # --- Tell structlog to route through the stdlib logging above -----
     structlog.configure(
-        processors=shared_processors + [
-            structlog.stdlib.ProcessorFormatter.remove_processors_meta,
-        ],
+        processors=shared_processors,
         logger_factory=structlog.stdlib.LoggerFactory(),
         wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,

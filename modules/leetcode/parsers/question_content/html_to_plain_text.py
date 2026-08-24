@@ -1,6 +1,9 @@
 import html
 
+import structlog
 from bs4 import BeautifulSoup
+
+logger = structlog.get_logger(__name__)
 
 BLOCK_TAGS = {
     "p",
@@ -67,5 +70,6 @@ def html_to_plain_text(raw_html: str | None) -> str:
 
         raw_text = soup.get_text(separator="")
         return _normalize_whitespace(raw_text)
-    except Exception:
+    except Exception as exc:
+        logger.warning("html_to_plain_text_conversion_failed", error=str(exc))
         return raw_html

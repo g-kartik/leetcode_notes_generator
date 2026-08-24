@@ -1,51 +1,72 @@
 """`populate` command group: fetch and store problem data, part by part."""
 
 import click
+import structlog
 
 from modules.leetcode.pipeline import LeetCodeSyncManager
 
 from .common import get_manager, print_batch_summary
 from .root import cli
 
+logger = structlog.get_logger(__name__)
+
 # --------------------------------------------------------------------------- #
-# Shared part metadata (used by `populate` and its batch-resolution helpers)
+# Shared part info (used by `populate` and its batch-resolution helpers)
 # --------------------------------------------------------------------------- #
 
 _PART_METHODS = {
-    "metadata": "populate_question_metadata",
+    "problem": "populate_question_metadata",
     "images": "populate_question_images",
     "submission": "populate_submission_code",
 }
 _PART_CACHE_KEYS = {
-    "metadata": "question",
+    "problem": "question",
     "images": "images",
     "submission": "submission",
 }
-_PART_ORDER = ("metadata", "images", "submission")
+_PART_ORDER = ("problem", "images", "submission")
 
 
 def _is_populated(mgr: LeetCodeSyncManager, part_name: str, slug: str) -> bool:
     """Whether `part_name` already has data for `slug`, without touching the network."""
+    log = logger.bind(slug=slug, stage=part_name)
+
     if part_name == "submission":
-        return mgr.storage.submissions_exists(slug)
+        found = mgr.storage.submissions_exists(slug)
+        log.info("part_populated_check", already_populated=found)
+        return found
 
     record = mgr.storage.problems_get_by_slug(slug)
     if record is None:
+        log.info("part_populated_check", already_populated=False, reason="no_problem_record_stored")
         return False
-    if part_name == "metadata":
-        return bool(record.raw_question_html)
-    if part_name == "images":
-        return bool(record.imgs_local_paths)
-    raise ValueError(f"Unknown part: {part_name}")
+    if part_name == "problem":
+        found = bool(record.raw_question_html)
+    elif part_name == "images":
+        found = bool(record.imgs_local_paths)
+    else:
+        raise ValueError(f"Unknown part: {part_name}")
+
+    log.info("part_populated_check", already_populated=found)
+    return found
 
 
 def _run_part_for_slug(mgr: LeetCodeSyncManager, part_name: str, slug: str, force: bool) -> str:
     """Runs one pipeline part for one slug. Returns 'skipped', 'success', or 'failed'."""
-    if not force and _is_populated(mgr, part_name, slug):
-        return "skipped"
+    with structlog.contextvars.bound_contextvars(slug=slug, stage=part_name):
+        log = logger.bind()
 
-    method = getattr(mgr, _PART_METHODS[part_name])
-    return "success" if method(slug, force_update=force) else "failed"
+        if not force and _is_populated(mgr, part_name, slug):
+            log.info("part_populate_skipped", reason="already_populated_using_stored_data")
+            return "skipped"
+
+        log.info("part_populate_started", force=force)
+        method = getattr(mgr, _PART_METHODS[part_name])
+        succeeded = method(slug, force_update=force)
+
+        status = "success" if succeeded else "failed"
+        log.info("part_populate_finished", status=status)
+        return status
 
 
 def _describe(part_name: str, slug: str, status: str) -> str:
@@ -56,18 +77,26 @@ def _describe(part_name: str, slug: str, status: str) -> str:
 def _resolve_part_batch_slugs(mgr: LeetCodeSyncManager, part_name: str, no_cache: bool) -> list[str]:
     """Slugs to target for a single-part --all run."""
     if no_cache:
-        return [r.slug for r in mgr.storage.list_all() if r.slug]
+        slugs = [r.slug for r in mgr.storage.list_all() if r.slug]
+        logger.info("part_batch_slugs_resolved", stage=part_name, source="db", slug_count=len(slugs))
+        return slugs
 
     key = _PART_CACHE_KEYS[part_name]
     cache = mgr.storage.read_pending_cache()
-    return [slug for slug, parts in cache.items() if not parts.get(key, False)]
+    slugs = [slug for slug, parts in cache.items() if not parts.get(key, False)]
+    logger.info("part_batch_slugs_resolved", stage=part_name, source="pending_cache", slug_count=len(slugs))
+    return slugs
 
 
 def _resolve_any_pending_slugs(mgr: LeetCodeSyncManager, no_cache: bool) -> list[str]:
     """Slugs to target for a `populate all --all` run (any part still outstanding)."""
     if no_cache:
-        return [r.slug for r in mgr.storage.list_all() if r.slug]
-    return list(mgr.storage.read_pending_cache().keys())
+        slugs = [r.slug for r in mgr.storage.list_all() if r.slug]
+        logger.info("populate_all_slugs_resolved", source="db", slug_count=len(slugs))
+        return slugs
+    slugs = list(mgr.storage.read_pending_cache().keys())
+    logger.info("populate_all_slugs_resolved", source="pending_cache", slug_count=len(slugs))
+    return slugs
 
 
 def _validate_target(slug: str | None, run_all: bool, no_cache: bool) -> None:
@@ -116,9 +145,11 @@ def _run_part_command(
 
     slugs = _resolve_part_batch_slugs(mgr, part_name, no_cache)
     if not slugs:
+        logger.info("populate_command_batch_completed", stage=part_name, reason="no_slugs_pending")
         click.echo("Nothing to do — no slugs pending.")
         return
 
+    logger.info("populate_command_batch_started", stage=part_name, slug_count=len(slugs))
     succeeded, skipped, failed = [], [], []
     buckets = {"success": succeeded, "skipped": skipped, "failed": failed}
     for target_slug in slugs:
@@ -126,20 +157,27 @@ def _run_part_command(
         click.echo(_describe(part_name, target_slug, status))
         buckets[status].append(target_slug)
 
+    logger.info(
+        "populate_command_batch_completed",
+        stage=part_name,
+        succeeded_count=len(succeeded),
+        skipped_count=len(skipped),
+        failed_count=len(failed),
+    )
     print_batch_summary(succeeded, failed, skipped)
 
 
-@populate.command("metadata")
+@populate.command("problem")
 @_target_options
-def populate_metadata(slug: str | None, run_all: bool, no_cache: bool, force: bool) -> None:
-    """Fetch question metadata + description."""
-    _run_part_command(get_manager(), "metadata", slug, run_all, no_cache, force)
+def populate_problem(slug: str | None, run_all: bool, no_cache: bool, force: bool) -> None:
+    """Fetch the problem's description and metadata."""
+    _run_part_command(get_manager(), "problem", slug, run_all, no_cache, force)
 
 
 @populate.command("images")
 @_target_options
 def populate_images(slug: str | None, run_all: bool, no_cache: bool, force: bool) -> None:
-    """Download question images (requires metadata to already exist)."""
+    """Download question images (requires the problem to already exist)."""
     _run_part_command(get_manager(), "images", slug, run_all, no_cache, force)
 
 
@@ -153,7 +191,7 @@ def populate_submission(slug: str | None, run_all: bool, no_cache: bool, force: 
 @populate.command("all")
 @_target_options
 def populate_all(slug: str | None, run_all: bool, no_cache: bool, force: bool) -> None:
-    """Run metadata, then images, then submission, in that fixed order."""
+    """Run problem, then images, then submission, in that fixed order."""
     _validate_target(slug, run_all, no_cache)
     mgr = get_manager()
 
@@ -170,9 +208,11 @@ def populate_all(slug: str | None, run_all: bool, no_cache: bool, force: bool) -
 
     slugs = _resolve_any_pending_slugs(mgr, no_cache)
     if not slugs:
+        logger.info("populate_all_command_completed", reason="no_slugs_pending")
         click.echo("Nothing to do — no slugs pending.")
         return
 
+    logger.info("populate_all_command_started", slug_count=len(slugs))
     succeeded, failed = [], []
     for target_slug in slugs:
         slug_failed = False
@@ -182,4 +222,9 @@ def populate_all(slug: str | None, run_all: bool, no_cache: bool, force: bool) -
             slug_failed = slug_failed or status == "failed"
         (failed if slug_failed else succeeded).append(target_slug)
 
+    logger.info(
+        "populate_all_command_completed",
+        succeeded_count=len(succeeded),
+        failed_count=len(failed),
+    )
     print_batch_summary(succeeded, failed)

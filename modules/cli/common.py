@@ -1,8 +1,11 @@
 """Helpers shared across more than one command module."""
 
 import click
+import structlog
 
 from modules.leetcode.pipeline import LeetCodeSyncManager
+
+logger = structlog.get_logger(__name__)
 
 _manager_instance: LeetCodeSyncManager | None = None
 
@@ -11,6 +14,7 @@ def get_manager() -> LeetCodeSyncManager:
     """Lazily builds the shared sync manager, so `--help` never touches disk/network setup."""
     global _manager_instance
     if _manager_instance is None:
+        logger.info("sync_manager_initialized")
         _manager_instance = LeetCodeSyncManager()
     return _manager_instance
 

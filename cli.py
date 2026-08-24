@@ -9,7 +9,9 @@ Command implementations live in `modules/cli/`, split by area: sync,
 populate, render, cache, db.
 """
 
+from logging_config import configure_logging
 from modules.cli import cli
 
 if __name__ == "__main__":
+    configure_logging()
     cli()

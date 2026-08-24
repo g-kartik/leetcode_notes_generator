@@ -1,8 +1,11 @@
 import html
 import re
 
+import structlog
 from bs4 import BeautifulSoup
 from markdownify import MarkdownConverter
+
+logger = structlog.get_logger(__name__)
 
 
 class LeetCodeMarkdownConverter(MarkdownConverter):
@@ -64,5 +67,6 @@ def html_to_markdown(raw_html: str | None) -> str:
         md = re.sub(r"\n{3,}", "\n\n", md)
 
         return md.strip()
-    except Exception:
+    except Exception as exc:
+        logger.warning("html_to_markdown_conversion_failed", error=str(exc))
         return raw_html

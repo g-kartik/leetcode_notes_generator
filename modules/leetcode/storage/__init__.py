@@ -41,18 +41,23 @@ class LeetCodeDSAStorage:
 
     def get_combined_by_slug(self, slug: str) -> CombinedQuestionRecord | None:
         """Returns `slug`'s problem data merged with its submission data, or None if the problem doesn't exist."""
+        log = logger.bind(slug=slug)
         problem = self.problems.get_by_slug(slug)
         if problem is None:
+            log.info("combined_record_skipped", reason="problem_record_missing")
             return None
         submission = self.submissions.get_by_slug(slug)
+        log.info("combined_record_built", has_submission=submission is not None)
         return CombinedQuestionRecord.from_parts(problem, submission)
 
     def list_all_combined(self) -> list[CombinedQuestionRecord]:
         """Returns every stored problem, each merged with its submission data if any exists."""
-        return [
+        combined = [
             CombinedQuestionRecord.from_parts(p, self.submissions.get_by_slug(p.slug))
             for p in self.problems.list_all()
         ]
+        logger.info("combined_records_listed", count=len(combined))
+        return combined
 
     # -------------------------------------------------------------------
     # Backward-compatible unprefixed CRUD (problems store only)

@@ -2,7 +2,9 @@
 
 import click
 
+CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
-@click.group()
+
+@click.group(context_settings=CONTEXT_SETTINGS)
 def cli() -> None:
     """LeetCode notes generator."""

@@ -1,6 +1,10 @@
 import json
 
+import structlog
+
 from modules.leetcode.settings import leetcode_settings
+
+logger = structlog.get_logger(__name__)
 
 
 class PendingCacheStore:
@@ -22,13 +26,15 @@ class PendingCacheStore:
 
     def _ensure_cache_exists(self) -> None:
         if not self.cache_path.exists():
+            logger.info("pending_cache_initialized", path=str(self.cache_path))
             self._save_cache({})
 
     def _load_cache(self) -> dict:
         try:
             with open(self.cache_path, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except json.JSONDecodeError, FileNotFoundError:
+        except (json.JSONDecodeError, FileNotFoundError) as exc:
+            logger.warning("pending_cache_load_failed_using_empty", path=str(self.cache_path), error=str(exc))
             return {}
 
     def _save_cache(self, data: dict) -> None:
@@ -40,7 +46,9 @@ class PendingCacheStore:
 
     def read_pending_cache(self) -> dict[str, dict[str, bool]]:
         """Returns the full pending cache: {slug: {question, images, submission}}."""
-        return self._load_cache()
+        cache = self._load_cache()
+        logger.info("pending_cache_read", pending_count=len(cache))
+        return cache
 
     def get_pending_slugs(self) -> list[str]:
         """Returns slugs that still have at least one part outstanding."""
@@ -53,10 +61,18 @@ class PendingCacheStore:
         slugs are added, with all parts set to False.
         """
         cache = self._load_cache()
+        newly_added = 0
         for slug in slugs:
             if slug not in cache:
                 cache[slug] = {part: False for part in self.CACHE_PARTS}
+                newly_added += 1
         self._save_cache(cache)
+        logger.info(
+            "pending_cache_refreshed",
+            fetched_count=len(slugs),
+            newly_added_count=newly_added,
+            total_tracked=len(cache),
+        )
         return cache
 
     def is_part_pending(self, slug: str, part: str) -> bool:
@@ -67,7 +83,9 @@ class PendingCacheStore:
             )
         cache = self._load_cache()
         entry = cache.get(slug)
-        return bool(entry) and not entry.get(part, False)
+        pending = bool(entry) and not entry.get(part, False)
+        logger.bind(slug=slug, part=part).info("pending_cache_part_checked", pending=pending)
+        return pending
 
     def mark_part_fetched(self, slug: str, part: str) -> None:
         """
@@ -80,21 +98,30 @@ class PendingCacheStore:
                 f"Unknown part '{part}'. Must be one of {self.CACHE_PARTS}."
             )
 
+        log = logger.bind(slug=slug, part=part)
         cache = self._load_cache()
         if slug not in cache:
+            log.info("pending_cache_mark_skipped", reason="slug_not_tracked")
             return
 
         cache[slug][part] = True
         if all(cache[slug].values()):
             del cache[slug]
+            log.info("pending_cache_slug_completed", reason="all_parts_fetched")
+        else:
+            remaining = [p for p, done in cache[slug].items() if not done]
+            log.info("pending_cache_part_marked_fetched", remaining_parts=remaining)
 
         self._save_cache(cache)
 
     def remove_from_cache(self, slug: str) -> bool:
         """Manually drops a slug from the pending cache. Returns True if it was present."""
+        log = logger.bind(slug=slug)
         cache = self._load_cache()
         if slug in cache:
             del cache[slug]
             self._save_cache(cache)
+            log.info("pending_cache_entry_removed")
             return True
+        log.info("pending_cache_entry_remove_skipped", reason="not_found")
         return False

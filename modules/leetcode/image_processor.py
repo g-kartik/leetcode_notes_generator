@@ -2,10 +2,13 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import requests
+import structlog
 from bs4 import BeautifulSoup
 
 from .models import ProblemRecord
 from .settings import leetcode_settings
+
+logger = structlog.get_logger(__name__)
 
 
 class LeetCodeImageProcessor:
@@ -62,13 +65,14 @@ class LeetCodeImageProcessor:
         guessed_path = image_path.with_suffix(f".{self._get_extension(url)}")
 
         if guessed_path.exists():
+            logger.info("image_download_skipped", url=url, reason="already_cached", path=str(guessed_path))
             return guessed_path
 
         try:
             response = self.image_session.get(url, timeout=10)
             response.raise_for_status()
         except Exception as exc:
-            print(f"Failed to download image: {exc}", url)
+            logger.warning("image_download_failed", url=url, error=str(exc))
             return None
 
         ext = self._get_extension(url, response.headers.get("Content-Type"))
@@ -76,25 +80,31 @@ class LeetCodeImageProcessor:
 
         image_path.parent.mkdir(parents=True, exist_ok=True)
         final_path.write_bytes(response.content)
+        logger.info("image_downloaded", url=url, path=str(final_path))
         return final_path
 
     def process_question_images(self, question_record: ProblemRecord) -> dict | None:
         """Downloads all <img> tags in a question's content and rewrites their src to local paths."""
+        slug = str(question_record.slug)
+        log = logger.bind(slug=slug)
+
         soup = BeautifulSoup(str(question_record.raw_question_html), "html.parser")
         images = soup.find_all("img")
 
         if not images:
+            log.info("image_processing_skipped", reason="no_images_found")
             return
 
+        log.info("image_processing_started", image_candidate_count=len(images))
+
         img_paths: list[str] = []
-        slug = str(question_record.slug)
         problem_assets_dir = self._create_problem_assets_dir(slug)
 
         for idx, img in enumerate(images):
             src = str(img.get("src", "")).strip()
 
             if not src or urlparse(src).scheme not in ("http", "https"):
-                print(f"{slug} Skipping invalid or relative img{idx}: {src}")
+                log.warning("image_skipped", reason="invalid_or_relative_src", index=idx, src=src)
                 img.decompose()
                 continue
 
@@ -110,6 +120,12 @@ class LeetCodeImageProcessor:
             # Store relative to PROJECT_ROOT instead of the absolute filesystem path
             relative_saved_path = saved_path.relative_to(self.project_root)
             img_paths.append(str(relative_saved_path))
+
+        log.info(
+            "image_processing_completed",
+            downloaded_count=len(img_paths),
+            skipped_count=len(images) - len(img_paths),
+        )
 
         return {
             "imgs_local_paths": img_paths,

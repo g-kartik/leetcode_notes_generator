@@ -1,8 +1,11 @@
 import requests
+import structlog
 from requests_ratelimiter import LimiterAdapter
 from urllib3.util import Retry
 
 from modules.leetcode.settings import leetcode_settings
+
+logger = structlog.get_logger(__name__)
 
 
 class LeetCodeClient:
@@ -58,10 +61,15 @@ class LeetCodeClient:
 
     def get_solved_questions_slugs(self) -> list[str]:
         """Fetches all solved problems ('ac' status) from the REST API endpoint."""
-
         url = self.settings.ENDPOINT_ALL_PROBLEMS
-        response = self.session.get(url)
-        response.raise_for_status()
+        logger.info("solved_questions_request_started", url=url)
+
+        try:
+            response = self.session.get(url)
+            response.raise_for_status()
+        except Exception:
+            logger.exception("solved_questions_request_failed", url=url)
+            raise
 
         data = response.json()
         raw_pairs = data.get("stat_status_pairs", [])
@@ -73,10 +81,15 @@ class LeetCodeClient:
                 slug = pair.get("stat").get("question__title_slug")
                 solved_problems_slugs.append(slug)
 
+        logger.info(
+            "solved_questions_request_succeeded",
+            solved_count=len(solved_problems_slugs),
+        )
         return solved_problems_slugs
 
     def get_question_details(self, slug: str) -> dict:
         """Queries LeetCode's GraphQL API to get comprehensive metadata for a specific problem."""
+        log = logger.bind(slug=slug)
         query = """
         query selectQuestion($titleSlug: String!) {
           question(titleSlug: $titleSlug) {
@@ -96,17 +109,30 @@ class LeetCodeClient:
 
         payload = {"query": query, "variables": {"titleSlug": slug}}
 
-        response = self.session.post(self.graphql_url, json=payload)
-        response.raise_for_status()
+        log.info("question_details_request_started")
+        try:
+            response = self.session.post(self.graphql_url, json=payload)
+            response.raise_for_status()
+        except Exception:
+            log.exception("question_details_request_failed")
+            raise
 
         result = response.json()
         if "errors" in result:
+            log.error("question_details_request_failed", errors=result["errors"])
             raise RuntimeError(f"GraphQL Error: {result['errors']}")
+
+        question = result.get("data", {}).get("question")
+        if not question:
+            log.warning("question_details_not_found")
+        else:
+            log.info("question_details_request_succeeded", title=question.get("title"))
 
         return result
 
     def get_submission_list(self, slug: str, limit: int = 20) -> dict:
         """Queries LeetCode GraphQL to retrieve the submission history for a given problem."""
+        log = logger.bind(slug=slug)
         query = """
         query submissionList($questionSlug: String!, $limit: Int, $offset: Int) {
           questionSubmissionList(
@@ -133,17 +159,27 @@ class LeetCodeClient:
             },
         }
 
-        response = self.session.post(self.graphql_url, json=payload)
-        response.raise_for_status()
+        log.info("submission_list_request_started", limit=limit)
+        try:
+            response = self.session.post(self.graphql_url, json=payload)
+            response.raise_for_status()
+        except Exception:
+            log.exception("submission_list_request_failed")
+            raise
 
         result = response.json()
         if "errors" in result:
+            log.error("submission_list_request_failed", errors=result["errors"])
             raise RuntimeError(f"GraphQL Error: {result['errors']}")
+
+        submissions = result.get("data", {}).get("questionSubmissionList", {}).get("submissions", [])
+        log.info("submission_list_request_succeeded", submission_count=len(submissions))
 
         return result
 
     def get_submission_details(self, submission_id: int) -> dict:
         """Queries LeetCode GraphQL to get full details and source code for a specific submission ID."""
+        log = logger.bind(submission_id=submission_id)
         query = """
         query submissionDetails($submissionId: Int!) {
           submissionDetails(submissionId: $submissionId) {
@@ -166,11 +202,18 @@ class LeetCodeClient:
             "variables": {"submissionId": int(submission_id)},
         }
 
-        response = self.session.post(self.graphql_url, json=payload)
-        response.raise_for_status()
+        log.info("submission_details_request_started")
+        try:
+            response = self.session.post(self.graphql_url, json=payload)
+            response.raise_for_status()
+        except Exception:
+            log.exception("submission_details_request_failed")
+            raise
 
         result = response.json()
         if "errors" in result:
+            log.error("submission_details_request_failed", errors=result["errors"])
             raise RuntimeError(f"GraphQL Error: {result['errors']}")
 
+        log.info("submission_details_request_succeeded")
         return result
