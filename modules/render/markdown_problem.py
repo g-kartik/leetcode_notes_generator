@@ -5,7 +5,9 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from modules.leetcode.models import QuestionRecord
-from modules.leetcode.settings import leetcode_settings
+from settings import project_settings
+
+from .settings import render_settings
 
 
 class FileVariant(StrEnum):
@@ -13,15 +15,15 @@ class FileVariant(StrEnum):
     LOCAL = "local"  # Will use the markdown with locally saved image urls(local relative paths)
 
 
-class LeetCodeProblemMarkdownRenderer:
+class LeetCodeDSAMarkdownRender:
     def __init__(
         self,
         template_dir: str | Path = "templates",
         variant: FileVariant | str = "remote",
     ):
         self.template_dir = Path(template_dir)
-        self.project_root = leetcode_settings.PROJECT_ROOT
-        self.obsidian_vault = leetcode_settings.OBSIDIAN_VALUT_DIR
+        self.project_root = project_settings.PROJECT_ROOT_DIR
+        self.obsidian_vault = render_settings.OBSIDIAN_VAULT_DIR
         self.variant = variant
         self.env = Environment(
             loader=FileSystemLoader(self.template_dir),

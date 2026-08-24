@@ -4,16 +4,14 @@ from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from settings import project_settings
-
 from .models import QuestionRecord
 from .settings import leetcode_settings
 
 
 class LeetCodeImageProcessor:
     def __init__(self):
-        self.settings = leetcode_settings
-        self.project_root = project_settings.PROJECT_ROOT_DIR
+        self.base_url = leetcode_settings.BASE_URL
+        self.project_root = leetcode_settings.PROJECT_ROOT_DIR
         self.assets_dir = leetcode_settings.DSA_PROBLEMS_ASSETS_DIR
         self.image_session = requests.Session()
         self._setup_image_session()
@@ -29,7 +27,7 @@ class LeetCodeImageProcessor:
                 ),
                 "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
                 "Accept-Language": "en-US,en;q=0.9",
-                "Referer": str(self.settings.BASE_URL),
+                "Referer": str(self.base_url),
             }
         )
 

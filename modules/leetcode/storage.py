@@ -6,7 +6,6 @@ from modules.leetcode.settings import leetcode_settings
 
 class LeetCodeDSAStorage:
     def __init__(self):
-        self.settings = leetcode_settings
         self.db_path = leetcode_settings.DSA_PROBLEMS_JSON
         self._ensure_db_exists()
 
