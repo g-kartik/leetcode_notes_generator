@@ -9,6 +9,7 @@ from modules.leetcode.storage.combined import CombinedQuestionRecord
 
 from .settings import render_settings
 from .utils import FileVariant as FV
+from .utils import dsa_root, sanitized_filename
 
 logger = structlog.get_logger(__name__)
 
@@ -73,15 +74,10 @@ class LeetCodeDSAProblemMarkdownRender:
         return rendered
 
     def _get_sanitized_filename(self, record: CombinedQuestionRecord) -> str:
-        """Generates an OS-safe Markdown filename."""
-        raw_name = f"{record.id or 0:04d} - {record.title}.md"
-        return "".join(
-            c for c in raw_name if c.isalnum() or c in (" ", "-", "_", ".")
-        ).rstrip()
+        return sanitized_filename(record.id, record.title)
 
     def _dsa_root(self, base: Path) -> Path:
-        """The fixed internal structure root: <base>/LeetCode/DSA."""
-        return base / "LeetCode" / "DSA"
+        return dsa_root(base)
 
     def _save_remote(self, record: CombinedQuestionRecord, base: Path) -> Path:
         """Writes remote variant into <base>/LeetCode/DSA/remote/<file>.md."""
