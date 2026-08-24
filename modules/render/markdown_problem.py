@@ -4,9 +4,9 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from modules.leetcode.models import QuestionRecord
+from modules.leetcode.settings import leetcode_settings
 
 from .settings import render_settings
-from modules.leetcode.settings import leetcode_settings
 from .utils import FileVariant as FV
 
 
