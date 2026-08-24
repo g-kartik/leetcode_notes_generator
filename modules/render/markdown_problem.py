@@ -3,8 +3,8 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from modules.leetcode.models import QuestionRecord
 from modules.leetcode.settings import leetcode_settings
+from modules.leetcode.storage.combined import CombinedQuestionRecord
 
 from .settings import render_settings
 from .utils import FileVariant as FV
@@ -44,8 +44,8 @@ class LeetCodeDSAProblemMarkdownRender:
         if self.write_to_obsidian:
             self.obsidian_vault.mkdir(parents=True, exist_ok=True)
 
-    def render(self, record: QuestionRecord, variant: FV) -> str:
-        """Renders a QuestionRecord into a Markdown string for a specific variant."""
+    def render(self, record: CombinedQuestionRecord, variant: FV) -> str:
+        """Renders a CombinedQuestionRecord into a Markdown string for a specific variant."""
         markdown_content = (
             record.content.remote_markdown
             if variant == FV.REMOTE
@@ -62,7 +62,7 @@ class LeetCodeDSAProblemMarkdownRender:
             submission=record.submission,
         )
 
-    def _get_sanitized_filename(self, record: QuestionRecord) -> str:
+    def _get_sanitized_filename(self, record: CombinedQuestionRecord) -> str:
         """Generates an OS-safe Markdown filename."""
         raw_name = f"{record.id or 0:04d} - {record.title}.md"
         return "".join(
@@ -73,7 +73,7 @@ class LeetCodeDSAProblemMarkdownRender:
         """The fixed internal structure root: <base>/LeetCode/DSA."""
         return base / "LeetCode" / "DSA"
 
-    def _save_remote(self, record: QuestionRecord, base: Path) -> Path:
+    def _save_remote(self, record: CombinedQuestionRecord, base: Path) -> Path:
         """Writes remote variant into <base>/LeetCode/DSA/remote/<file>.md."""
         remote_dir = self._dsa_root(base) / "remote"
         remote_dir.mkdir(parents=True, exist_ok=True)
@@ -82,7 +82,7 @@ class LeetCodeDSAProblemMarkdownRender:
         output_file.write_text(self.render(record, FV.REMOTE), encoding="utf-8")
         return output_file
 
-    def _save_local(self, record: QuestionRecord, base: Path) -> Path:
+    def _save_local(self, record: CombinedQuestionRecord, base: Path) -> Path:
         """Writes local variant into <base>/LeetCode/DSA/local/<slug>/<file>.md, with assets."""
         if not record.slug:
             raise ValueError("question slug cannot be null")
@@ -103,14 +103,14 @@ class LeetCodeDSAProblemMarkdownRender:
         output_file.write_text(self.render(record, FV.LOCAL), encoding="utf-8")
         return output_file
 
-    def _save_variant(self, record: QuestionRecord, variant: FV, base: Path) -> Path:
+    def _save_variant(self, record: CombinedQuestionRecord, variant: FV, base: Path) -> Path:
         return (
             self._save_local(record, base)
             if variant == FV.LOCAL
             else self._save_remote(record, base)
         )
 
-    def save(self, record: QuestionRecord) -> dict:
+    def save(self, record: CombinedQuestionRecord) -> dict:
         """
         Renders and saves `record` to output_base, and additionally to the
         Obsidian vault if write_to_obsidian=True. Both destinations share the

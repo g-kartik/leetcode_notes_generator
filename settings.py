@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import ClassVar
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -10,4 +11,4 @@ class BaseProjectSettings(BaseSettings):
         extra="ignore",
     )
 
-    PROJECT_ROOT_DIR: Path = Path(__file__).resolve().parent
+    PROJECT_ROOT_DIR: ClassVar[Path] = Path(__file__).resolve().parent

@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from .models import QuestionRecord
+from .models import ProblemRecord
 from .settings import leetcode_settings
 
 
@@ -78,7 +78,7 @@ class LeetCodeImageProcessor:
         final_path.write_bytes(response.content)
         return final_path
 
-    def process_question_images(self, question_record: QuestionRecord) -> dict | None:
+    def process_question_images(self, question_record: ProblemRecord) -> dict | None:
         """Downloads all <img> tags in a question's content and rewrites their src to local paths."""
         soup = BeautifulSoup(str(question_record.raw_question_html), "html.parser")
         images = soup.find_all("img")

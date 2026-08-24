@@ -3,7 +3,8 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
-class SubmissionDetails(BaseModel):
+class SubmissionRecord(BaseModel):
+    slug: str | None = None
     lang: str
     code: str
     submission_date: datetime
@@ -16,7 +17,7 @@ class QuestionContent(BaseModel):
     text: str | None = None
 
 
-class QuestionRecord(BaseModel):
+class ProblemRecord(BaseModel):
     slug: str | None = None
     id: int | None = None
     title: str | None = None
@@ -29,4 +30,3 @@ class QuestionRecord(BaseModel):
     imgs_local_paths: list[str] | None = None
 
     content: QuestionContent = QuestionContent()
-    submission: SubmissionDetails | None = None

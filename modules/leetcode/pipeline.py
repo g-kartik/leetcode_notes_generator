@@ -1,6 +1,6 @@
 import structlog
 
-from modules.leetcode.models import QuestionRecord, SubmissionDetails
+from modules.leetcode.models import ProblemRecord, SubmissionRecord
 
 from . import parsers
 from .client import LeetCodeClient
@@ -30,11 +30,15 @@ class LeetCodeSyncManager:
     ) -> list[str]:
         """
         Returns slugs still pending at least one of metadata/images/submission.
-
         By default reads straight from the pending-slugs cache (no API call).
         Pass force_refresh=True to hit the LeetCode API for the latest solved
         list and merge any newly-solved slugs into the cache. Also runs
         automatically the first time, if the cache is empty.
+
+        Note: this only populates the pending cache, never the DB. A DB record
+        for a slug is created the first time populate_question_metadata actually
+        fetches real data for it — the DB should only ever hold slugs with at
+        least one populated part.
         """
         cache = self.storage.read_pending_cache()
 
@@ -42,25 +46,15 @@ class LeetCodeSyncManager:
             logger.info("Fetching solved questions list from LeetCode...")
             solved_problem_slugs = self.client.get_solved_questions_slugs()
             cache = self.storage.refresh_pending_cache(solved_problem_slugs)
-
-            for slug in solved_problem_slugs:
-                if not self.storage.exists(slug):
-                    self.storage.add_or_update(QuestionRecord(slug=slug))
-                    logger.info(f"New solved question found: {slug}")
+            logger.info(
+                f"{len(solved_problem_slugs)} solved question(s) fetched from API."
+            )
         else:
             logger.info("Using cached pending slugs (force_refresh=False).")
 
         pending_slugs = list(cache.keys())
         logger.info(f"{len(pending_slugs)} question(s) pending in cache.")
         return pending_slugs
-
-    # ------------------------------------------------------------------ #
-    # Shared helper
-    # ------------------------------------------------------------------ #
-
-    def _get_or_create_record(self, slug: str) -> QuestionRecord:
-        """Returns the existing record for `slug`, or a fresh empty one if none exists."""
-        return self.storage.get_by_slug(slug) or QuestionRecord(slug=slug)
 
     # ------------------------------------------------------------------ #
     # Part 1: Question metadata + content (description)
@@ -73,7 +67,7 @@ class LeetCodeSyncManager:
 
         If metadata already exists and force_update is False, this is a no-op.
         """
-        existing_record = self.storage.get_by_slug(slug)
+        existing_record = self.storage.problems_get_by_slug(slug)
 
         has_metadata = existing_record is not None and bool(
             existing_record.raw_question_html
@@ -94,13 +88,12 @@ class LeetCodeSyncManager:
 
         parsed_data = parsers.gql_question_data(gql_data)
 
-        # Preserve fields owned by the other two parts (submission, images).
+        # Preserve fields owned by the other part of this store (images).
         preserved = {}
         if existing_record:
-            preserved["submission"] = existing_record.submission
             preserved["imgs_local_paths"] = existing_record.imgs_local_paths
 
-        question_record = QuestionRecord(**parsed_data, **preserved)
+        question_record = ProblemRecord(**parsed_data, **preserved)
         question_record.content.text = parsers.html_to_plain_text(
             question_record.raw_question_html
         )
@@ -110,7 +103,7 @@ class LeetCodeSyncManager:
         question_record.content.local_markdown = question_record.content.remote_markdown
         question_record.content.local_html = question_record.raw_question_html
 
-        self.storage.add_or_update(question_record)
+        self.storage.problems_add_or_update(question_record)
         self.storage.mark_part_fetched(slug, "question")
 
         logger.info(f"Successfully populated metadata for '{slug}'.")
@@ -130,7 +123,7 @@ class LeetCodeSyncManager:
 
         If images already exist and force_update is False, this is a no-op.
         """
-        existing_record = self.storage.get_by_slug(slug)
+        existing_record = self.storage.problems_get_by_slug(slug)
 
         if not existing_record or not existing_record.raw_question_html:
             logger.warning(
@@ -162,7 +155,7 @@ class LeetCodeSyncManager:
             image_result.get("content_local_html")
         )
 
-        self.storage.add_or_update(existing_record)
+        self.storage.problems_add_or_update(existing_record)
         self.storage.mark_part_fetched(slug, "images")
 
         logger.info(f"Successfully populated images for '{slug}'.")
@@ -187,11 +180,9 @@ class LeetCodeSyncManager:
 
         If submission data already exists and force_update is False, this is a no-op.
         """
-        existing_record = self.storage.get_by_slug(slug)
+        existing_submission = self.storage.submissions_get_by_slug(slug)
 
-        has_submission = (
-            existing_record is not None and existing_record.submission is not None
-        )
+        has_submission = existing_submission is not None
         if has_submission and not force_update:
             logger.info(
                 f"Submission data already exists for '{slug}'. Use force_update to refetch."
@@ -211,11 +202,9 @@ class LeetCodeSyncManager:
             accepted_submission_id
         )
         submission_data = parsers.gql_submission_data(submission_details_result)
-        submission_record = SubmissionDetails(**submission_data)
+        submission_record = SubmissionRecord(slug=slug, **submission_data)
 
-        record = self._get_or_create_record(slug)
-        record.submission = submission_record
-        self.storage.add_or_update(record)
+        self.storage.submissions_add_or_update(submission_record)
         self.storage.mark_part_fetched(slug, "submission")
 
         logger.info(f"Successfully populated submission data for '{slug}'.")

@@ -1,0 +1,10 @@
+{
+  "submissions": {
+    "container-with-most-water": {
+      "slug": "container-with-most-water",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def maxArea(self, height: List[int]) -> int:\n        left = 0\n        right = len(height) - 1\n\n        max_water = 0\n        while left < right:\n            l = right - left\n            h = min(height[left], height[right])\n\n            water = l * h\n\n            max_water = max(max_water, water)\n\n            if height[left] <= height[right]:\n                left += 1\n            else:\n                right -= 1\n\n        return max_water\n\n\nsol = Solution().maxArea([1, 8, 6, 2, 5, 4, 8, 3, 7])\nprint(sol)\n",
+      "submission_date": "2025-12-06T07:49:40Z"
+    }
+  }
+}
