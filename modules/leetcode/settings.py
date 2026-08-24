@@ -3,6 +3,8 @@ from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from settings import project_settings
+
 
 class LeetCodeSettings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -22,8 +24,12 @@ class LeetCodeSettings(BaseSettings):
 
     ENDPOINT_ALL_PROBLEMS: str = f"{BASE_URL}/api/problems/all/"
 
-    PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent.parent
+    DATA_STORAGE_DIR: Path = project_settings.PROJECT_ROOT_DIR / "LEETCODE_DATA"
 
+    PROBLEMS_DATA_DIR: Path = DATA_STORAGE_DIR / "dsa_problems"
+
+    DSA_PROBLEMS_JSON: Path = PROBLEMS_DATA_DIR / "db.json"
+    DSA_PROBLEMS_ASSETS_DIR: Path = PROBLEMS_DATA_DIR / "assets"
 
 # Module-level single instance or lazy evaluation
 leetcode_settings = LeetCodeSettings()

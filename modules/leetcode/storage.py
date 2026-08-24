@@ -1,33 +1,34 @@
 import json
-from pathlib import Path
 
 from modules.leetcode.models import QuestionRecord
+from modules.leetcode.settings import leetcode_settings
 
 
-class LeetCodeStorage:
-    def __init__(self, storage_path: str | Path = "leetcode_data.json"):
-        self.storage_path = Path(storage_path)
-        self._ensure_file_exists()
+class LeetCodeDSAStorage:
+    def __init__(self):
+        self.settings = leetcode_settings
+        self.db_path = leetcode_settings.DSA_PROBLEMS_JSON
+        self._ensure_db_exists()
 
-    def _ensure_file_exists(self) -> None:
+    def _ensure_db_exists(self) -> None:
         """Initializes an empty JSON structure if the file doesn't exist."""
-        if not self.storage_path.exists():
+        if not self.db_path.exists():
             self._save_raw({"questions": {}})
 
     def _load_raw(self) -> dict:
         """Reads raw JSON from disk."""
         try:
-            with open(self.storage_path, "r", encoding="utf-8") as f:
+            with open(self.db_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except json.JSONDecodeError, FileNotFoundError:
             return {"questions": {}}
 
     def _save_raw(self, data: dict) -> None:
         """Atomic write: writes to a temporary file first, then replaces target file."""
-        temp_path = self.storage_path.with_suffix(".tmp")
+        temp_path = self.db_path.with_suffix(".tmp")
         with open(temp_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
-        temp_path.replace(self.storage_path)
+        temp_path.replace(self.db_path)
 
     # -------------------------------------------------------------------
     # CRUD Operations

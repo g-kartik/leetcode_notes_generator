@@ -5,7 +5,7 @@ from modules.leetcode.models import QuestionRecord, SubmissionDetails
 from . import parsers
 from .client import LeetCodeClient
 from .image_processor import LeetCodeImageProcessor
-from .storage import LeetCodeStorage
+from .storage import LeetCodeDSAStorage
 
 logger = logging.getLogger(__name__)
 
@@ -14,11 +14,11 @@ class LeetCodeSyncManager:
     def __init__(
         self,
         client: LeetCodeClient | None = None,
-        storage: LeetCodeStorage | None = None,
+        storage: LeetCodeDSAStorage | None = None,
         image_processor: LeetCodeImageProcessor | None = None,
     ):
         self.client = client or LeetCodeClient()
-        self.storage = storage or LeetCodeStorage()
+        self.storage = storage or LeetCodeDSAStorage()
         self.image_processor = image_processor or LeetCodeImageProcessor()
 
     def sync_solved_questions_data_entry(self) -> list[str]:

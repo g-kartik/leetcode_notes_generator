@@ -4,17 +4,20 @@ from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 
+from settings import project_settings
+
 from .models import QuestionRecord
 from .settings import leetcode_settings
-from .storage import LeetCodeStorage
 
 
 class LeetCodeImageProcessor:
-    def __init__(self, settings=leetcode_settings):
-        self.settings = settings
-        self.storage = LeetCodeStorage()
+    def __init__(self):
+        self.settings = leetcode_settings
+        self.project_root = project_settings.PROJECT_ROOT_DIR
+        self.assets_dir = leetcode_settings.DSA_PROBLEMS_ASSETS_DIR
         self.image_session = requests.Session()
         self._setup_image_session()
+        self._ensure_assets_dir_exists()
 
     def _setup_image_session(self) -> None:
         self.image_session.headers.update(
@@ -30,6 +33,9 @@ class LeetCodeImageProcessor:
             }
         )
 
+    def _ensure_assets_dir_exists(self):
+        self.assets_dir.mkdir(parents=True, exist_ok=True)
+
     def _get_extension(self, url: str, content_type: str | None = None) -> str:
         """Extracts a file extension from the URL path, falling back to Content-Type, then 'png'."""
         path = urlparse(url).path
@@ -43,20 +49,19 @@ class LeetCodeImageProcessor:
                 return "jpg" if ext == "jpeg" else ext
         return "png"
 
-    def _assets_dir(self, slug: str) -> Path:
-        """leetcode_problems/local/<slug>/assets/"""
-        return (
-            self.settings.PROJECT_ROOT / "leetcode_problems" / "local" / slug / "assets"
-        )
+    def _create_problem_assets_dir(self, slug: str) -> Path:
+        path = self.assets_dir / slug
+        path.mkdir(parents=True, exist_ok=True)
+        return path
 
-    def download_single_image(self, url: str, stem_path: Path) -> Path | None:
+    def download_single_image(self, url: str, image_path: Path) -> Path | None:
         """Downloads an image to `stem_path` with a resolved extension, skipping if cached.
 
         `stem_path` should have no meaningful suffix yet (e.g. `.../two-sum/assets/0`); the real
         extension is resolved from the URL first and the Content-Type header second.
         Returns the final path the image was written to, or None on failure.
         """
-        guessed_path = stem_path.with_suffix(f".{self._get_extension(url)}")
+        guessed_path = image_path.with_suffix(f".{self._get_extension(url)}")
 
         if guessed_path.exists():
             return guessed_path
@@ -69,9 +74,9 @@ class LeetCodeImageProcessor:
             return None
 
         ext = self._get_extension(url, response.headers.get("Content-Type"))
-        final_path = stem_path.with_suffix(f".{ext}")
+        final_path = image_path.with_suffix(f".{ext}")
 
-        stem_path.parent.mkdir(parents=True, exist_ok=True)
+        image_path.parent.mkdir(parents=True, exist_ok=True)
         final_path.write_bytes(response.content)
         return final_path
 
@@ -85,7 +90,7 @@ class LeetCodeImageProcessor:
 
         img_paths: list[str] = []
         slug = str(question_record.slug)
-        assets_dir = self._assets_dir(slug)
+        problem_assets_dir = self._create_problem_assets_dir(slug)
 
         for idx, img in enumerate(images):
             src = str(img.get("src", "")).strip()
@@ -95,8 +100,8 @@ class LeetCodeImageProcessor:
                 img.decompose()
                 continue
 
-            stem_path = assets_dir / f"{idx}"
-            saved_path = self.download_single_image(src, stem_path)
+            image_path = problem_assets_dir / f"{idx}"
+            saved_path = self.download_single_image(src, image_path)
 
             if saved_path is None:
                 img.decompose()
@@ -105,7 +110,7 @@ class LeetCodeImageProcessor:
             img["src"] = f"assets/{saved_path.name}"
 
             # Store relative to PROJECT_ROOT instead of the absolute filesystem path
-            relative_saved_path = saved_path.relative_to(self.settings.PROJECT_ROOT)
+            relative_saved_path = saved_path.relative_to(self.project_root)
             img_paths.append(str(relative_saved_path))
 
         return {
