@@ -1,7 +1,11 @@
 import json
 
+import structlog
+
 from modules.leetcode.models import QuestionRecord
 from modules.leetcode.settings import leetcode_settings
+
+logger = structlog.get_logger(__name__)
 
 
 class LeetCodeDSAStorage:

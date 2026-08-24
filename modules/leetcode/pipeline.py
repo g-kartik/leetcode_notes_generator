@@ -1,4 +1,4 @@
-import logging
+import structlog
 
 from modules.leetcode.models import QuestionRecord, SubmissionDetails
 
@@ -7,7 +7,7 @@ from .client import LeetCodeClient
 from .image_processor import LeetCodeImageProcessor
 from .storage import LeetCodeDSAStorage
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class LeetCodeSyncManager:
