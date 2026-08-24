@@ -24,7 +24,8 @@ class LeetCodeSettings(BaseProjectSettings):
     DATA_STORAGE_DIR: Path = BaseProjectSettings.PROJECT_ROOT_DIR / "LEETCODE_DATA"
     PROBLEMS_DATA_DIR: Path = DATA_STORAGE_DIR / "dsa_problems"
 
-    DSA_PROBLEMS_JSON: Path = PROBLEMS_DATA_DIR / "db.json"
+    DSA_PROBLEMS_JSON_DB: Path = PROBLEMS_DATA_DIR / "db.json"
+    DSA_PROBLEMS_CACHE_JSON_DB: Path = PROBLEMS_DATA_DIR / "solved_slugs_cache.json"
     DSA_PROBLEMS_ASSETS_DIR: Path = PROBLEMS_DATA_DIR / "assets"
 
 
