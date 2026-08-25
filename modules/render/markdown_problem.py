@@ -87,7 +87,10 @@ class LeetCodeDSAProblemMarkdownRender:
         target_problem_dir = root / "local" / record.slug
         target_problem_dir.mkdir(parents=True, exist_ok=True)
 
-        source_assets_dir = self.dsa_problems_assets_dir / record.slug / "assets"
+        # Images live directly under DSA_PROBLEMS_ASSETS_DIR/<slug>/ (no nested
+        # "assets" folder on the source side — see image_processor.py) — that
+        # whole slug dir becomes this note's assets/ folder.
+        source_assets_dir = self.dsa_problems_assets_dir / record.slug
 
         target_assets_dir = target_problem_dir / "assets"
 
