@@ -135,11 +135,11 @@ class LeetCodeSyncManager:
                 logger.warning("images_fetch_skipped", reason="problem_metadata_missing")
                 return False
 
-            has_images = bool(existing_record.imgs_local_paths)
-            if has_images and not force_update:
+            if existing_record.images_populated and not force_update:
                 logger.info(
                     "images_already_populated",
-                    image_count=len(existing_record.imgs_local_paths),
+                    has_images=existing_record.has_images,
+                    image_count=len(existing_record.imgs_local_paths or []),
                 )
                 return False
 
@@ -148,22 +148,20 @@ class LeetCodeSyncManager:
                 question_record=existing_record
             )
 
-            if not image_result:
-                logger.info("images_fetch_succeeded", image_count=0)
-                self.storage.mark_part_fetched(slug, "images")
-                return True
-
-            existing_record.imgs_local_paths = image_result.get("imgs_local_paths")
-            existing_record.content.local_html = image_result.get("content_local_html")
-            existing_record.content.local_markdown = parsers.html_to_markdown(
-                image_result.get("content_local_html")
-            )
+            existing_record.has_images = image_result["has_images"]
+            existing_record.imgs_local_paths = image_result["imgs_local_paths"]
+            if image_result["content_local_html"] is not None:
+                existing_record.content.local_html = image_result["content_local_html"]
+                existing_record.content.local_markdown = parsers.html_to_markdown(
+                    image_result["content_local_html"]
+                )
 
             self.storage.problems_add_or_update(existing_record)
             self.storage.mark_part_fetched(slug, "images")
 
             logger.info(
                 "images_fetch_succeeded",
+                has_images=existing_record.has_images,
                 image_count=len(existing_record.imgs_local_paths or []),
             )
             return True

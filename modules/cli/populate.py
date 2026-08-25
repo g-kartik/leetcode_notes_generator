@@ -43,7 +43,12 @@ def _is_populated(mgr: LeetCodeSyncManager, part_name: str, slug: str) -> bool:
     if part_name == "problem":
         found = bool(record.raw_question_html)
     elif part_name == "images":
-        found = bool(record.imgs_local_paths)
+        # A question can legitimately have zero images (has_images=False,
+        # done) or have images that all failed to download so far
+        # (has_images=True, imgs_local_paths still empty, worth retrying) —
+        # images_populated tells the two apart instead of just checking
+        # imgs_local_paths truthiness.
+        found = record.images_populated
     else:
         raise ValueError(f"Unknown part: {part_name}")
 

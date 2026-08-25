@@ -83,8 +83,14 @@ class LeetCodeImageProcessor:
         logger.info("image_downloaded", url=url, path=str(final_path))
         return final_path
 
-    def process_question_images(self, question_record: ProblemRecord) -> dict | None:
-        """Downloads all <img> tags in a question's content and rewrites their src to local paths."""
+    def process_question_images(self, question_record: ProblemRecord) -> dict:
+        """
+        Downloads all <img> tags in a question's content and rewrites their src to
+        local paths. Always returns a dict, including when the question has no
+        images at all (`has_images=False`), so callers can persist that
+        distinction instead of just leaving `imgs_local_paths` empty and
+        ambiguous between "no images" and "not processed yet".
+        """
         slug = str(question_record.slug)
         log = logger.bind(slug=slug)
 
@@ -93,7 +99,7 @@ class LeetCodeImageProcessor:
 
         if not images:
             log.info("image_processing_skipped", reason="no_images_found")
-            return
+            return {"has_images": False, "imgs_local_paths": [], "content_local_html": None}
 
         log.info("image_processing_started", image_candidate_count=len(images))
 
@@ -128,6 +134,7 @@ class LeetCodeImageProcessor:
         )
 
         return {
+            "has_images": True,
             "imgs_local_paths": img_paths,
             "content_local_html": str(soup),
         }

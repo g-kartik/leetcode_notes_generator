@@ -179,6 +179,26 @@ class LeetCodeDSAStorage:
         """Returns slugs that still have at least one part outstanding."""
         return self.cache.get_pending_slugs()
 
+    def _actual_part_state(self, slug: str) -> dict[str, bool]:
+        """
+        Reconstructs true per-part completion for `slug` from the problem/
+        submission records themselves, independent of whatever the pending
+        cache currently says.
+
+        `images` uses `ProblemRecord.images_populated` (has_images=False, or
+        has_images=True with at least one successful download) rather than
+        raw `imgs_local_paths` truthiness — a question can legitimately have
+        zero images, which would otherwise be indistinguishable from "images
+        part never ran", while a question whose images all failed to
+        download should still be considered pending (worth retrying).
+        """
+        problem = self.problems.get_by_slug(slug)
+        return {
+            "question": bool(problem and problem.raw_question_html),
+            "images": bool(problem and problem.images_populated),
+            "submission": self.submissions.exists(slug),
+        }
+
     def refresh_pending_cache(self, slugs: list[str]) -> dict[str, dict[str, bool]]:
         """
         Merges newly-fetched solved slugs into the cache, preserving existing
@@ -189,16 +209,9 @@ class LeetCodeDSAStorage:
         as fully pending) and skips adding it if every part is already done.
         """
         tracked = self.cache.read_pending_cache()
-        initial_state = {}
-        for slug in slugs:
-            if slug in tracked:
-                continue
-            problem = self.problems.get_by_slug(slug)
-            initial_state[slug] = {
-                "question": bool(problem and problem.raw_question_html),
-                "images": bool(problem and problem.imgs_local_paths),
-                "submission": self.submissions.exists(slug),
-            }
+        initial_state = {
+            slug: self._actual_part_state(slug) for slug in slugs if slug not in tracked
+        }
         return self.cache.refresh_pending_cache(slugs, initial_state=initial_state)
 
     def reconcile_pending_cache(self) -> int:
@@ -217,12 +230,7 @@ class LeetCodeDSAStorage:
         tracked = self.cache.read_pending_cache()
         marked = 0
         for slug, parts in tracked.items():
-            problem = self.problems.get_by_slug(slug)
-            actual = {
-                "question": bool(problem and problem.raw_question_html),
-                "images": bool(problem and problem.imgs_local_paths),
-                "submission": self.submissions.exists(slug),
-            }
+            actual = self._actual_part_state(slug)
             for part, done in actual.items():
                 if done and not parts.get(part, False):
                     self.cache.mark_part_fetched(slug, part)
