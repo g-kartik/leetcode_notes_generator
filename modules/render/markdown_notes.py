@@ -61,16 +61,10 @@ class LeetCodeDSAProblemNotesRender:
         self,
         style: NotesStyle | str = NotesStyle.PLAIN,
         output_base: Path | str | None = None,
-        link_variant: FileVariant = FileVariant.REMOTE,
     ):
         self.style = NotesStyle(style) if isinstance(style, str) else style
-        if link_variant == FileVariant.ALL:
-            raise ValueError("link_variant must be 'remote' or 'local', not 'all'")
 
         self.template_dir = render_settings.TEMPLATE_DIR
-        # Only used by the 'plain' style, which links a single problem-file variant.
-        # 'obsidian' always links both remote and local, regardless of this.
-        self.link_variant = link_variant
 
         # Priority: caller-supplied (CLI) > OUTPUT_BASE_DIR (.env) > DEFAULT_WRITE_DIR.
         self.output_base = render_settings.resolve_base_dir(output_base)
@@ -149,17 +143,24 @@ class LeetCodeDSAProblemNotesRender:
             # need a full, disambiguating path from output_base (which, when the
             # user points OUTPUT_BASE_DIR at their vault, IS the vault root).
             remote_file = self._problem_file_path(record, FileVariant.REMOTE)
-            local_file = self._problem_file_path(record, FileVariant.LOCAL)
             self._warn_if_missing(remote_file, log)
-            self._warn_if_missing(local_file, log)
             context["problem_remote_link"] = (
                 remote_file.relative_to(self.output_base).with_suffix("").as_posix()
             )
-            context["problem_local_link"] = (
-                local_file.relative_to(self.output_base).with_suffix("").as_posix()
-            )
+            if record.has_local_variant:
+                local_file = self._problem_file_path(record, FileVariant.LOCAL)
+                self._warn_if_missing(local_file, log)
+                context["problem_local_link"] = (
+                    local_file.relative_to(self.output_base).with_suffix("").as_posix()
+                )
+            else:
+                context["problem_local_link"] = None
         else:
-            problem_file = self._problem_file_path(record, self.link_variant)
+            # Always link whichever variant was actually rendered for this
+            # problem — local when it exists, remote otherwise. See
+            # CombinedQuestionRecord.has_local_variant.
+            variant = FileVariant.LOCAL if record.has_local_variant else FileVariant.REMOTE
+            problem_file = self._problem_file_path(record, variant)
             self._warn_if_missing(problem_file, log)
             context["problem_note_name"] = problem_file.stem
             context["problem_note_relpath"] = os.path.relpath(

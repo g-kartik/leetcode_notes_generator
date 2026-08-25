@@ -47,3 +47,14 @@ class ProblemRecord(BaseModel):
         the images part hasn't run at all yet (`has_images` still None).
         """
         return self.has_images is False or bool(self.imgs_local_paths)
+
+    @property
+    def has_local_variant(self) -> bool:
+        """
+        Whether a local-images file variant is actually worth rendering:
+        only when the question has images AND at least one was successfully
+        downloaded. False when there are no images, every download failed,
+        or the images part hasn't run yet — in all of those cases
+        local_markdown doesn't meaningfully differ from remote_markdown.
+        """
+        return bool(self.has_images) and bool(self.imgs_local_paths)

@@ -20,10 +20,16 @@ class CombinedQuestionRecord(BaseModel):
     tags: list[dict] | None = None
     raw_question_html: str | None = None
 
+    has_images: bool | None = None
     imgs_local_paths: list[str] | None = None
 
     content: QuestionContent = QuestionContent()
     submission: SubmissionRecord | None = None
+
+    @property
+    def has_local_variant(self) -> bool:
+        """See ProblemRecord.has_local_variant — same logic, same fields."""
+        return bool(self.has_images) and bool(self.imgs_local_paths)
 
     @classmethod
     def from_parts(

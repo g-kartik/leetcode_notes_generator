@@ -17,14 +17,11 @@ logger = structlog.get_logger(__name__)
 class LeetCodeDSAProblemMarkdownRender:
     def __init__(
         self,
-        variant: FV | str = FV.ALL,
         output_base: Path | str | None = None,
     ):
         self.template_dir = render_settings.TEMPLATE_DIR
         self.project_root = render_settings.PROJECT_ROOT_DIR
         self.dsa_problems_assets_dir = leetcode_settings.DSA_PROBLEMS_ASSETS_DIR
-
-        self.variant = FV(variant) if isinstance(variant, str) else variant
 
         # Priority: caller-supplied (CLI) > OUTPUT_BASE_DIR (.env) > DEFAULT_WRITE_DIR.
         self.output_base = render_settings.resolve_base_dir(output_base)
@@ -118,10 +115,14 @@ class LeetCodeDSAProblemMarkdownRender:
         """
         Renders and saves `record` under <output_base>/Leetcode Problems/<variant>/....
 
+        Remote is always written. Local is written too only when the record
+        has a local variant worth having (see CombinedQuestionRecord.has_local_variant)
+        — otherwise it'd be a byte-for-byte duplicate of remote.
+
         Returns e.g.: {"local": Path(...), "remote": Path(...)}
         """
         log = logger.bind(slug=record.slug)
-        variants = [FV.LOCAL, FV.REMOTE] if self.variant == FV.ALL else [self.variant]
+        variants = [FV.REMOTE, FV.LOCAL] if record.has_local_variant else [FV.REMOTE]
         root = problems_root(self.output_base)
 
         log.info("render_save_started", variants=[v.value for v in variants])

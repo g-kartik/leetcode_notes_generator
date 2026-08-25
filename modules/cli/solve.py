@@ -20,7 +20,7 @@ from modules.ai_prefill.settings import ai_prefill_settings
 from modules.leetcode.pipeline import LeetCodeSyncManager
 from modules.render.markdown_notes import LeetCodeDSAProblemNotesRender
 from modules.render.markdown_problem import LeetCodeDSAProblemMarkdownRender
-from modules.render.utils import FileVariant, NotesStyle
+from modules.render.utils import NotesStyle
 
 from .common import CircuitBreaker, get_manager, print_batch_summary
 from .picker import label_slugs, pick_slugs
@@ -48,7 +48,6 @@ def _solve_one(
     slug: str,
     *,
     style: NotesStyle,
-    link_variant: FileVariant,
     output_base: Path | None,
     force: bool,
     ai: bool,
@@ -70,9 +69,7 @@ def _solve_one(
     combined = mgr.storage.get_combined_by_slug(slug)
 
     click.echo("  -> render problem file")
-    LeetCodeDSAProblemMarkdownRender(
-        variant=FileVariant.ALL, output_base=output_base
-    ).save(combined)
+    LeetCodeDSAProblemMarkdownRender(output_base=output_base).save(combined)
 
     target_style = style
     if ai:
@@ -95,7 +92,7 @@ def _solve_one(
 
     click.echo(f"  -> render notes file ({target_style.value})")
     notes_renderer = LeetCodeDSAProblemNotesRender(
-        style=target_style, output_base=output_base, link_variant=link_variant
+        style=target_style, output_base=output_base
     )
     _, status = notes_renderer.save(combined, force=force)
     return status
@@ -123,13 +120,6 @@ def _solve_one(
     "render the '+ai' variant of --style using it.",
 )
 @click.option(
-    "--link-variant",
-    type=click.Choice([FileVariant.REMOTE.value, FileVariant.LOCAL.value]),
-    default=FileVariant.REMOTE.value,
-    show_default=True,
-    help="Which rendered problem file variant the note links to.",
-)
-@click.option(
     "--output-base", "output_base", type=click.Path(path_type=Path), default=None,
     help="Priority: this flag > OUTPUT_BASE_DIR (.env) > render_settings.DEFAULT_WRITE_DIR.",
 )
@@ -152,7 +142,6 @@ def solve(
     run_all: bool,
     style: str,
     ai: bool,
-    link_variant: str,
     output_base: Path | None,
     force: bool,
     rate_limit: bool,
@@ -168,7 +157,6 @@ def solve(
     rate_limit_delay = ai_prefill_settings.RATE_LIMIT_SECONDS if rate_limit else 0.0
     kwargs = dict(
         style=NotesStyle(style),
-        link_variant=FileVariant(link_variant),
         output_base=output_base,
         force=force,
         ai=ai,

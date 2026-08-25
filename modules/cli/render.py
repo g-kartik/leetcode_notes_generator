@@ -6,7 +6,6 @@ import click
 import structlog
 
 from modules.render.markdown_problem import LeetCodeDSAProblemMarkdownRender
-from modules.render.utils import FileVariant
 
 from .common import get_manager, print_batch_summary
 from .root import cli
@@ -21,32 +20,27 @@ logger = structlog.get_logger(__name__)
     help="Render every slug that already has problem data populated.",
 )
 @click.option(
-    "--variant",
-    type=click.Choice([v.value for v in FileVariant]),
-    default=FileVariant.ALL.value,
-    show_default=True,
-)
-@click.option(
     "--output-base", "output_base", type=click.Path(path_type=Path), default=None,
     help="Priority: this flag > OUTPUT_BASE_DIR (.env) > render_settings.DEFAULT_WRITE_DIR.",
 )
 def render(
     slug: str | None,
     run_all: bool,
-    variant: str,
     output_base: Path | None,
 ) -> None:
-    """Render a stored question into Markdown notes."""
+    """Render a stored question into Markdown notes.
+
+    Always writes the remote-image-links variant. Also writes a local variant
+    (with downloaded images copied alongside) when the problem actually has
+    images that were successfully downloaded — see ProblemRecord.has_local_variant.
+    """
     if slug and run_all:
         raise click.UsageError("Pass either SLUG or --all, not both.")
     if not slug and not run_all:
         raise click.UsageError("Pass either SLUG or --all.")
 
     mgr = get_manager()
-    renderer = LeetCodeDSAProblemMarkdownRender(
-        variant=FileVariant(variant),
-        output_base=output_base,
-    )
+    renderer = LeetCodeDSAProblemMarkdownRender(output_base=output_base)
 
     if slug:
         with structlog.contextvars.bound_contextvars(slug=slug, stage="render"):

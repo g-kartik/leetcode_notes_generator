@@ -1,8 +1,9 @@
-{# Personal study-notes template with Obsidian features (wikilinks, callouts).
+{# Personal study-notes template with Obsidian features (wikilinks).
    Data vars (from the sync pipeline): frontend_id, slug, title, difficulty, url
    Tag var: tags — personal pattern tags + LeetCode question-tag slugs, combined
-   Linking vars: problem_remote_link, problem_local_link — vault-relative wikilink
-     targets (no extension) for the two already-rendered problem/solution files
+   Linking vars: problem_remote_link (always set), problem_local_link (None
+     when the problem has no local variant) — vault-relative wikilink targets
+     (no extension) for the rendered problem/solution file(s)
    Prefill vars (all optional — pass None/empty to leave blank for manual fill):
      aliases, related, problem_summary, pattern, core_idea, invariant,
      trap, recognition_clue, complexity_time, complexity_space, takeaway #}
@@ -13,34 +14,33 @@
         -
     {%- endif -%}
 {% endmacro -%}
-{% macro callout(kind, text) -%}
-    > [!{{ kind }}]
-    > {{ text or '' }}
-{%- endmacro -%}
 ---
 id: {{ frontend_id }}
 slug: {{ slug }}
 aliases: [{% for a in aliases %}"{{ a }}"{% if not loop.last %}, {% endif %}{% endfor %}]
 tags:
 {% for t in tags %}
-          - {{ t }}
+ - {{ t }}
 {% endfor %}
 difficulty: {{ difficulty }}
 platform: LeetCode
 problem_link: "{{ url }}"
 {% if related %}
-        related:
-        {% for r in related %}
-              - "[[{{ r }}]]"
-        {% endfor %}
+  related:
+  {% for r in related %}
+        - "[[{{ r }}]]"
+  {% endfor %}
 {% endif %}
----
-# {{ frontend_id }}. {{ title }}
-🔗 **Problem & Solution:** [[{{ problem_remote_link }}|Remote]] · [[{{ problem_local_link }}|Local]]
+
 ---
 
+# {{ frontend_id }}. {{ title }}
+### 🔗 **Problem & Solution:** {% if problem_local_link %}[[{{ problem_remote_link }}|Remote]] · [[{{ problem_local_link }}|Local]]{% else %}[[{{ problem_remote_link }}|Link]]{% endif %}
+
+
+
 **Problem:**
-{{ callout('quote', problem_summary) }}
+> {{ problem_summary or '' }}
 
 **Pattern:**
 {{ bullets(pattern) }}
@@ -58,14 +58,14 @@ problem_link: "{{ url }}"
 {{ bullets(recognition_clue) }}
 
 **Complexity:**
-- Time: `{{ complexity_time or '' }}`
-- Space: `{{ complexity_space or '' }}`
+- Time: `{{ complexity_time or 'O(?)' }}`
+- Space: `{{ complexity_space or 'O(?)' }}`
 
 **My takeaway:**
 {{ bullets(takeaway) }}
 {% if related %}
 
-        ---
+                            ---
     **Related:**
     {% for r in related %}
         - [[{{ r }}]]

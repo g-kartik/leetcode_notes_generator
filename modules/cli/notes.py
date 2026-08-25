@@ -10,7 +10,7 @@ import structlog
 from modules.ai_prefill import AIPrefillGenerator, AIProviderError, PrefillGenerationError
 from modules.ai_prefill.settings import ai_prefill_settings
 from modules.render.markdown_notes import LeetCodeDSAProblemNotesRender, PrefillMissingError
-from modules.render.utils import FileVariant, NotesStyle
+from modules.render.utils import NotesStyle
 
 from .common import CircuitBreaker, get_manager, print_batch_summary
 from .picker import label_records, pick_slugs
@@ -41,13 +41,6 @@ def notes() -> None:
     "'notes prefill SLUG' first, or generation fails with a clear error.",
 )
 @click.option(
-    "--link-variant",
-    type=click.Choice([FileVariant.REMOTE.value, FileVariant.LOCAL.value]),
-    default=FileVariant.REMOTE.value,
-    show_default=True,
-    help="Which already-rendered problem file variant the note links to.",
-)
-@click.option(
     "--output-base",
     "output_base",
     type=click.Path(path_type=Path),
@@ -65,14 +58,16 @@ def notes_render(
     slug: str | None,
     run_all: bool,
     style: str,
-    link_variant: str,
     output_base: Path | None,
     force: bool,
 ) -> None:
     """Render a stored question into a study-notes file (frontmatter + problem link only, for now).
 
-    Omit both SLUG and --all to pick interactively instead — a searchable,
-    multi-select prompt over every slug with problem data populated.
+    The note always links whichever problem file variant was actually
+    rendered for it — local when the problem has downloaded images, remote
+    otherwise (see LeetCodeDSAProblemMarkdownRender). Omit both SLUG and
+    --all to pick interactively instead — a searchable, multi-select prompt
+    over every slug with problem data populated.
     """
     if slug and run_all:
         raise click.UsageError("Pass either SLUG or --all, not both.")
@@ -81,7 +76,6 @@ def notes_render(
     renderer = LeetCodeDSAProblemNotesRender(
         style=NotesStyle(style),
         output_base=output_base,
-        link_variant=FileVariant(link_variant),
     )
 
     if slug:
