@@ -133,6 +133,28 @@ class PendingCacheStore:
 
         self._save_cache(cache)
 
+    def reopen_part(self, slug: str, part: str) -> None:
+        """
+        Marks `part` as pending again for `slug`, re-inserting the slug into
+        the cache if it had already been dropped (i.e. was previously 3/3
+        complete). The other parts are assumed still done — this is meant
+        for reopening a single part that new information (e.g. a fresher
+        accepted submission) shows is now stale, not for re-tracking a slug
+        from scratch.
+        """
+        if part not in self.CACHE_PARTS:
+            raise ValueError(
+                f"Unknown part '{part}'. Must be one of {self.CACHE_PARTS}."
+            )
+
+        log = logger.bind(slug=slug, part=part)
+        cache = self._load_cache()
+        entry = cache.get(slug, {p: True for p in self.CACHE_PARTS})
+        entry[part] = False
+        cache[slug] = entry
+        self._save_cache(cache)
+        log.info("pending_cache_part_reopened")
+
     def remove_from_cache(self, slug: str) -> bool:
         """Manually drops a slug from the pending cache. Returns True if it was present."""
         log = logger.bind(slug=slug)

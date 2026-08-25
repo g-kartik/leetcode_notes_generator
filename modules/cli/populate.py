@@ -32,8 +32,12 @@ def _is_populated(mgr: LeetCodeSyncManager, part_name: str, slug: str) -> bool:
     log = logger.bind(slug=slug, stage=part_name)
 
     if part_name == "submission":
-        found = mgr.storage.submissions_exists(slug)
-        log.info("part_populated_check", already_populated=found)
+        exists = mgr.storage.submissions_exists(slug)
+        # A submission can exist but still be cache-pending — e.g. reopened by
+        # sync_recent_accepted because a fresher accepted submission was seen.
+        reopened = mgr.storage.is_part_pending(slug, "submission")
+        found = exists and not reopened
+        log.info("part_populated_check", already_populated=found, exists=exists, reopened=reopened)
         return found
 
     record = mgr.storage.problems_get_by_slug(slug)

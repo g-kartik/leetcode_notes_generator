@@ -5,6 +5,7 @@ from modules.leetcode.models import ProblemRecord, SubmissionRecord
 from . import parsers
 from .client import LeetCodeClient
 from .image_processor import LeetCodeImageProcessor
+from .recent_activity import dedupe_latest_per_slug, filter_today
 from .storage import LeetCodeDSAStorage
 
 logger = structlog.get_logger(__name__)
@@ -183,12 +184,20 @@ class LeetCodeSyncManager:
         Deliberately does NOT mark the part complete if no accepted submission is
         found yet — the user may submit an accepted solution later.
 
-        If submission data already exists and force_update is False, this is a no-op.
+        If submission data already exists and force_update is False, this is a
+        no-op — unless the pending cache has the 'submission' part marked as
+        outstanding (see sync_recent_accepted), in which case it's refetched
+        regardless.
         """
         with structlog.contextvars.bound_contextvars(slug=slug, stage="submission"):
             existing_submission = self.storage.submissions_get_by_slug(slug)
 
-            has_submission = existing_submission is not None
+            # The pending cache can say "submission" is outstanding even though
+            # a submission record already exists — e.g. sync_recent_accepted
+            # reopened it because a fresher accepted submission was seen. That
+            # should be refetched even without an explicit force_update.
+            still_pending_in_cache = self.storage.is_part_pending(slug, "submission")
+            has_submission = existing_submission is not None and not still_pending_in_cache
             if has_submission and not force_update:
                 logger.info(
                     "submission_already_populated",
@@ -217,3 +226,100 @@ class LeetCodeSyncManager:
 
             logger.info("submission_fetch_succeeded", lang=submission_record.lang)
             return True
+
+    # ------------------------------------------------------------------ #
+    # Recent accepted submissions (LeetCode's recentAcSubmissionList feed).
+    #
+    # Separate from the solved-slugs pending cache flow above: it doesn't
+    # discover the full solved list, it surfaces what was *just* accepted,
+    # with a timestamp — good for a "what did I solve today" report, and
+    # for noticing an already-synced problem has a fresher accepted
+    # submission than what's stored.
+    # ------------------------------------------------------------------ #
+
+    def _fetch_recent_accepted(self, limit: int, today_only: bool) -> list[dict]:
+        """
+        Fetches, parses, optionally filters to today (local time), and
+        dedupes (one entry per slug, latest timestamp) the recent accepted-
+        submissions feed. Shared by list_recent_accepted and
+        sync_recent_accepted — this part never touches storage.
+        """
+        log = logger.bind(stage="recent")
+        log.info("recent_accepted_fetch_started", limit=limit, today_only=today_only)
+
+        raw = self.client.get_recent_ac_submissions(limit=limit)
+        submissions = parsers.gql_recent_ac_submissions(raw)
+
+        if today_only:
+            submissions = filter_today(submissions)
+
+        submissions = dedupe_latest_per_slug(submissions)
+        log.info("recent_accepted_fetch_completed", submission_count=len(submissions))
+        return submissions
+
+    def list_recent_accepted(self, limit: int = 20, today_only: bool = True) -> list[dict]:
+        """
+        Returns recently-accepted submissions as {slug, title, timestamp}
+        dicts, filtered to today by default. Read-only — never touches
+        stored state, safe to call as often as you like.
+        """
+        return self._fetch_recent_accepted(limit, today_only)
+
+    def sync_recent_accepted(self, limit: int = 20, today_only: bool = True) -> dict:
+        """
+        Fetches recently-accepted submissions and classifies each slug
+        against what's already stored, updating only the pending cache.
+        Never fetches problem/image/submission data itself — that stays
+        populate's job, run separately.
+
+        Classification per slug:
+          - no submission record stored at all -> "new_slugs": added to the
+            pending cache with every part outstanding, same as a normal
+            solved-slugs sync discovering it for the first time.
+          - a submission record exists but is older than this accepted
+            timestamp -> "stale_submission_slugs": only the 'submission'
+            part is reopened in the pending cache (question/images are left
+            alone — the description/images haven't changed).
+          - the stored submission is already current -> "up_to_date_slugs".
+
+        Returns a dict with the deduped "solved" list plus the three
+        classification lists.
+        """
+        log = logger.bind(stage="recent_sync")
+        submissions = self._fetch_recent_accepted(limit, today_only)
+
+        new_slugs = []
+        stale_submission_slugs = []
+        up_to_date_slugs = []
+
+        for item in submissions:
+            slug = item["slug"]
+            existing_submission = self.storage.submissions_get_by_slug(slug)
+
+            if existing_submission is None:
+                new_slugs.append(slug)
+            elif existing_submission.submission_date < item["timestamp"]:
+                stale_submission_slugs.append(slug)
+            else:
+                up_to_date_slugs.append(slug)
+
+        if new_slugs:
+            self.storage.refresh_pending_cache(new_slugs)
+
+        for slug in stale_submission_slugs:
+            self.storage.reopen_part(slug, "submission")
+
+        log.info(
+            "recent_accepted_sync_completed",
+            solved_count=len(submissions),
+            new_count=len(new_slugs),
+            stale_count=len(stale_submission_slugs),
+            up_to_date_count=len(up_to_date_slugs),
+        )
+
+        return {
+            "solved": submissions,
+            "new_slugs": new_slugs,
+            "stale_submission_slugs": stale_submission_slugs,
+            "up_to_date_slugs": up_to_date_slugs,
+        }

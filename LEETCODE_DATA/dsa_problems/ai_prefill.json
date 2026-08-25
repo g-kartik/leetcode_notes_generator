@@ -1,0 +1,82 @@
+{
+  "prefills": {
+    "container-with-most-water": [
+      {
+        "generated_at": "2026-08-25T16:47:57.260504",
+        "provider": "claude_code",
+        "content": {
+          "problem_summary": "Given n vertical lines at positions 0..n-1 with heights given by the array, choose two lines that together with the x-axis form a container, and return the maximum amount of water it can hold (area = width between the lines times the shorter line's height).",
+          "pattern": [
+            "Two Pointers",
+            "Greedy"
+          ],
+          "core_idea": [
+            "Start with the widest possible container (leftmost and rightmost lines) and shrink inward, since width can only decrease as pointers move.",
+            "At each step compute area as (right - left) * min(height[left], height[right]) and track the max seen.",
+            "Always move the pointer at the shorter line inward, because keeping the shorter line and reducing width can never increase area — only replacing the shorter line offers a chance at a taller bound.",
+            "Discarding the taller line while keeping the shorter one is provably suboptimal, so the greedy pointer move never eliminates the true optimal answer."
+          ],
+          "invariant": [
+            "The current [left, right] window always contains the maximum-area pair found so far or a pair that could still beat it — no optimal pair lies outside the shrinking window.",
+            "Width (right - left) strictly decreases each iteration.",
+            "max_water is monotonically non-decreasing throughout the loop."
+          ],
+          "trap": [
+            "Moving both pointers or moving the taller pointer instead of the shorter one breaks the greedy correctness argument.",
+            "Off-by-one on width calculation (should be right - left, not right - left + 1, since lines have zero width).",
+            "Forgetting that height[i] can be 0, which still needs to be handled correctly (area becomes 0 for that pairing).",
+            "Assuming the brute-force O(n^2) all-pairs check is required; two pointers reduce it to O(n)."
+          ],
+          "recognition_clue": [
+            "Asks for max area/container formed by two elements in an array with the x-axis, implying width * min-height formula.",
+            "Array of heights with an implicit index-based width — classic setup for two pointers from both ends.",
+            "Tags explicitly include Two Pointers and Greedy."
+          ],
+          "complexity_time": "O(n)",
+          "complexity_space": "O(1)",
+          "takeaway": [
+            "When width shrinks monotonically and area depends on min(height), greedily move the pointer at the smaller boundary inward — it's the only move that could possibly improve the result."
+          ]
+        }
+      },
+      {
+        "generated_at": "2026-08-25T16:48:21.494029",
+        "provider": "claude_code",
+        "content": {
+          "problem_summary": "Given heights of n vertical lines at positions 0..n-1, pick two lines that together with the x-axis form a container, and find the maximum possible water area (area = width × min of the two heights). The container cannot be slanted, so height is bounded by the shorter line.",
+          "pattern": [
+            "Two Pointers",
+            "Greedy"
+          ],
+          "core_idea": [
+            "Start with the widest possible container (leftmost and rightmost lines) and shrink inward.",
+            "Area is limited by the shorter of the two lines, so moving the pointer at the taller line can never increase area (width shrinks, height stays capped by the same or smaller min), but moving the pointer at the shorter line might find a taller line and increase area.",
+            "Always move the pointer pointing to the shorter line inward, since keeping it can only produce equal-or-worse results with any partner.",
+            "Track the maximum area seen across all pointer positions visited."
+          ],
+          "invariant": [
+            "At every step, left < right, and all pairs outside the current [left, right] window have already been considered or are provably no better than what's tracked.",
+            "The pointer movement guarantees the optimal container is never skipped, because the untried pair with the shorter line's index is dominated by the current pair."
+          ],
+          "trap": [
+            "Forgetting that area is width × min(height[left], height[right]), not max — using the taller line overestimates capacity.",
+            "Moving the wrong pointer (taller one) or moving both pointers at once can skip over the true maximum.",
+            "Off-by-one on width calculation: width is right - left (number of gaps), not right - left + 1.",
+            "Not handling equal heights consistently (moving either pointer works when heights are equal, but must move at least one).",
+            "Assuming a brute-force O(n^2) check of all pairs is required — greedy two-pointer reduces it to O(n)."
+          ],
+          "recognition_clue": [
+            "Array represents heights/values indexed by position, and you need to choose two indices to maximize an area/volume/capacity metric.",
+            "The answer is monotonic in the sense that shrinking the window from both ends while making a greedy local choice doesn't lose the optimal pair.",
+            "n up to 1e5 suggests an O(n) or O(n log n) solution is expected, ruling out brute force O(n^2)."
+          ],
+          "complexity_time": "O(n)",
+          "complexity_space": "O(1)",
+          "takeaway": [
+            "When the metric is bounded by the smaller of two chosen endpoints and width shrinks as pointers move inward, greedily discard the pointer at the smaller endpoint — it can never be part of a better solution than the current one."
+          ]
+        }
+      }
+    ]
+  }
+}

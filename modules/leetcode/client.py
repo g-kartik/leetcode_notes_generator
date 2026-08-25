@@ -184,6 +184,52 @@ class LeetCodeClient:
 
         return result
 
+    def get_recent_ac_submissions(self, username: str | None = None, limit: int = 20) -> dict:
+        """Queries LeetCode GraphQL for a user's most recent accepted submissions.
+
+        Uses `username` if given, otherwise falls back to `LEETCODE_USERNAME`
+        from settings. Raises ValueError if neither is available.
+        """
+        target_username = username or self.settings.USERNAME
+        if not target_username:
+            raise ValueError(
+                "No LeetCode username available — pass one explicitly or set LEETCODE_USERNAME."
+            )
+
+        log = logger.bind(username=target_username)
+        query = """
+        query recentAcSubmissions($username: String!, $limit: Int!) {
+          recentAcSubmissionList(username: $username, limit: $limit) {
+            title
+            titleSlug
+            timestamp
+          }
+        }
+        """
+
+        payload = {
+            "query": query,
+            "variables": {"username": target_username, "limit": limit},
+        }
+
+        log.info("recent_ac_submissions_request_started", limit=limit)
+        try:
+            response = self.session.post(self.graphql_url, json=payload)
+            response.raise_for_status()
+        except Exception:
+            log.exception("recent_ac_submissions_request_failed")
+            raise
+
+        result = response.json()
+        if "errors" in result:
+            log.error("recent_ac_submissions_request_failed", errors=result["errors"])
+            raise RuntimeError(f"GraphQL Error: {result['errors']}")
+
+        submissions = result.get("data", {}).get("recentAcSubmissionList", [])
+        log.info("recent_ac_submissions_request_succeeded", submission_count=len(submissions))
+
+        return result
+
     def get_submission_details(self, submission_id: int) -> dict:
         """Queries LeetCode GraphQL to get full details and source code for a specific submission ID."""
         log = logger.bind(submission_id=submission_id)

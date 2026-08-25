@@ -55,6 +55,26 @@ def gql_submission_list(response_data: dict) -> list[dict]:
     return submissions
 
 
+def gql_recent_ac_submissions(response_data: dict) -> list[dict]:
+    """Flattens a recentAcSubmissionList response into {slug, title, timestamp} dicts."""
+    raw_submissions = response_data.get("data", {}).get("recentAcSubmissionList", [])
+
+    parsed = []
+    for item in raw_submissions:
+        raw_timestamp = item.get("timestamp")
+        timestamp = datetime.fromtimestamp(int(raw_timestamp), tz=UTC) if raw_timestamp else None
+        parsed.append(
+            {
+                "slug": item.get("titleSlug"),
+                "title": item.get("title"),
+                "timestamp": timestamp,
+            }
+        )
+
+    logger.info("recent_ac_submissions_parsed", submission_count=len(parsed))
+    return parsed
+
+
 def gql_submission_data(response_data: dict) -> dict:
     data = response_data.get("data", {}).get("submissionDetails", {})
 

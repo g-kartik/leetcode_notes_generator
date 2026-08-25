@@ -1,0 +1,10 @@
+Problem: $title (#$question_id, $difficulty)
+Tags: $tags
+
+Description:
+$description
+
+Accepted solution ($language):
+```
+$code
+```

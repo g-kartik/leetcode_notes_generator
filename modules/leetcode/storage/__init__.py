@@ -247,6 +247,10 @@ class LeetCodeDSAStorage:
         """Marks `part` ('question' | 'images' | 'submission') as fetched for `slug`."""
         self.cache.mark_part_fetched(slug, part)
 
+    def reopen_part(self, slug: str, part: str) -> None:
+        """Marks `part` pending again for `slug`, re-adding it to the cache if it was previously fully complete."""
+        self.cache.reopen_part(slug, part)
+
     def remove_from_cache(self, slug: str) -> bool:
         """Manually drops a slug from the pending cache. Returns True if it was present."""
         return self.cache.remove_from_cache(slug)

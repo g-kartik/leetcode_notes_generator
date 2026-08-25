@@ -17,6 +17,10 @@ class LeetCodeSettings(BaseProjectSettings):
     SESSION: str = Field(..., description="LeetCode session cookie")
     CSRF_TOKEN: str = Field(..., description="LeetCode CSRF token")
 
+    # Optional (not a secret) — only needed for the recentAcSubmissionList
+    # query, which takes a username rather than reading it off the session.
+    USERNAME: str | None = Field(default=None, description="LeetCode public username")
+
     BASE_URL: str = "https://leetcode.com"
 
     ENDPOINT_ALL_PROBLEMS: str = f"{BASE_URL}/api/problems/all/"
