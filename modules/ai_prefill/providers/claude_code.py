@@ -17,13 +17,20 @@ class ClaudeCodeProvider(SubprocessJSONProvider):
     backend — no separate API key needed, usage is billed against the
     Claude Code subscription instead of a metered API key.
 
-    Tool access is disabled (see _DISALLOWED_TOOLS) and the subprocess runs
-    from a neutral temp directory rather than the project root, so this call
-    never picks up this repo's CLAUDE.md / hooks / auto-memory, and can't
-    read or touch project files even if a tool call somehow slipped through.
+    This call should reason only over the prompt text it's handed — nothing
+    from this machine's Claude Code configuration should leak in or be
+    actionable:
+      - `--safe-mode` disables CLAUDE.md (project *and* user-global),
+        skills, plugins, hooks, and MCP servers for the session.
+      - `--disallowedTools` additionally locks down the built-in tools
+        --safe-mode leaves enabled (Bash, file I/O, web access, ...) — a
+        prefill call has no legitimate reason to touch any of them.
+      - Running from a neutral temp dir (not the project root) is
+        redundant with --safe-mode's CLAUDE.md handling, but kept as
+        cheap defense in depth against anything that still consults cwd.
     Deliberately does NOT use `--bare` — bare mode only accepts
     ANTHROPIC_API_KEY/apiKeyHelper auth and never reads the OAuth session a
-    plain subscription relies on.
+    plain subscription relies on; --safe-mode keeps normal auth working.
     """
 
     name = "claude_code"
@@ -37,6 +44,7 @@ class ClaudeCodeProvider(SubprocessJSONProvider):
                 "json",
                 "--model",
                 model,
+                "--safe-mode",
                 "--disallowedTools",
                 _DISALLOWED_TOOLS,
             ],

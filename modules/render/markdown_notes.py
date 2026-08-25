@@ -6,6 +6,7 @@ from pathlib import Path
 import structlog
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+from modules.ai_prefill.storage import AIPrefillStorage
 from modules.leetcode.storage.combined import CombinedQuestionRecord
 
 from .settings import render_settings
@@ -30,9 +31,15 @@ _TEMPLATE_BY_STYLE = {
     NotesStyle.OBSIDIAN_AI: "leetcode_notes_obsidian.md.j2",
 }
 
-# No AI prefill step exists yet, so every section renders as an empty
-# placeholder for the user to fill in by hand — only frontmatter + the
-# problem/solution link(s) are populated.
+
+class PrefillMissingError(RuntimeError):
+    """Raised when a '+ai' style is requested but no AI prefill content has been generated yet for the slug."""
+
+
+# Every section renders as an empty placeholder for the user to fill in by
+# hand by default — only frontmatter + the problem/solution link(s) are
+# populated. '+ai' styles override the prefill_* keys below with the latest
+# stored modules.ai_prefill.PrefillContent for the slug (see render()).
 _EMPTY_PREFILL = dict(
     aliases=[],
     pattern_tags=[],
@@ -57,11 +64,6 @@ class LeetCodeDSAProblemNotesRender:
         link_variant: FileVariant = FileVariant.REMOTE,
     ):
         self.style = NotesStyle(style) if isinstance(style, str) else style
-        if self.style in _AI_STYLES:
-            raise NotImplementedError(
-                f"notes style '{self.style.value}' is not implemented yet — AI prefill is a "
-                f"later task. Use '{NotesStyle.PLAIN.value}' or '{NotesStyle.OBSIDIAN.value}' for now."
-            )
         if link_variant == FileVariant.ALL:
             raise ValueError("link_variant must be 'remote' or 'local', not 'all'")
 
@@ -127,7 +129,21 @@ class LeetCodeDSAProblemNotesRender:
             tags=self._tags(record),
         )
 
-        if self.style == NotesStyle.OBSIDIAN:
+        if self.style in _AI_STYLES:
+            prefill = AIPrefillStorage().latest(record.slug)
+            if prefill is None:
+                raise PrefillMissingError(
+                    f"no AI prefill content found for '{record.slug}' — run "
+                    f"'notes prefill {record.slug}' first, or use '{NotesStyle.PLAIN.value}'/"
+                    f"'{NotesStyle.OBSIDIAN.value}' instead"
+                )
+            # PrefillContent's field names are chosen to match these template
+            # vars 1:1 (see modules/ai_prefill/schema.py), so this directly
+            # overrides the corresponding _EMPTY_PREFILL placeholders.
+            context.update(prefill.content.model_dump())
+            log.info("notes_prefill_applied", generated_at=str(prefill.generated_at))
+
+        if self.style in (NotesStyle.OBSIDIAN, NotesStyle.OBSIDIAN_AI):
             # Obsidian wikilinks resolve relative to the vault root, not the note's
             # own folder, and remote/local share the same filename — so both links
             # need a full, disambiguating path from output_base (which, when the

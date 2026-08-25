@@ -76,6 +76,82 @@
             "When the metric is bounded by the smaller of two chosen endpoints and width shrinks as pointers move inward, greedily discard the pointer at the smaller endpoint — it can never be part of a better solution than the current one."
           ]
         }
+      },
+      {
+        "generated_at": "2026-08-25T17:09:14.985638",
+        "provider": "claude_code",
+        "content": {
+          "problem_summary": "Given n vertical lines at positions 0..n-1 with heights given by the array, find two lines that together with the x-axis form a container holding the maximum amount of water. The area is width (distance between indices) times the shorter of the two heights.",
+          "pattern": [
+            "Two Pointers",
+            "Greedy"
+          ],
+          "core_idea": [
+            "Start with the widest possible container (leftmost and rightmost lines) and shrink inward.",
+            "Area is limited by the shorter of the two lines, so moving the pointer at the taller line can never increase area (width only decreases and height is capped by the same or smaller min); only moving the shorter line's pointer has a chance to find a taller line and possibly increase area.",
+            "At each step compute width * min(height[left], height[right]) and track the maximum seen.",
+            "Greedily discard the shorter line at each step since it can never be part of a better solution than what's already been considered at this width."
+          ],
+          "invariant": [
+            "At every iteration, all containers wider than the current [left, right] window have already been considered (since left and right start at the extremes and only move inward).",
+            "The pointer that gets moved always points at the line with the smaller (or equal) height, ensuring no potentially-better container is skipped."
+          ],
+          "trap": [
+            "Moving the taller pointer instead of the shorter one discards the correct candidate and can skip the optimal answer.",
+            "Off-by-one in width calculation: width should be right - left, not right - left + 1 (0-indexed line positions, not counts).",
+            "Forgetting to update max_water before moving pointers.",
+            "Ties in height (height[left] == height[right]) — either pointer can move, but must move exactly one, not both.",
+            "Assuming a brute-force O(n^2) check of all pairs is required; the greedy two-pointer approach is what achieves O(n)."
+          ],
+          "recognition_clue": [
+            "Asks for a maximum area/volume formed by two boundaries with the array representing heights.",
+            "Constraint hints at needing better than O(n^2) (n up to 1e5).",
+            "Problem structure involves choosing two indices to maximize width * min(height) — a classic setup for inward-moving two pointers with a greedy elimination argument."
+          ],
+          "complexity_time": "O(n)",
+          "complexity_space": "O(1)",
+          "takeaway": [
+            "When maximizing width * min(height) between two boundaries, use two pointers starting at the extremes and always move the pointer at the smaller height inward — this greedy elimination is provably safe and avoids O(n^2) brute force."
+          ]
+        }
+      }
+    ],
+    "two-sum": [
+      {
+        "generated_at": "2026-08-25T16:56:28.704401",
+        "provider": "claude_code",
+        "content": {
+          "problem_summary": "Given an array of integers and a target sum, find the indices of the two distinct elements that add up to the target, assuming exactly one solution exists.",
+          "pattern": [
+            "Hash Table",
+            "One-pass complement lookup"
+          ],
+          "core_idea": [
+            "For each number, compute its complement (target - num) and check if that complement was already seen.",
+            "Use a hash map to store previously seen numbers mapped to their indices, enabling O(1) lookup.",
+            "As soon as a complement match is found, return the stored index and the current index — no need to scan further."
+          ],
+          "invariant": [
+            "At the time index idx is processed, memo contains exactly the numbers (and their indices) from nums[0..idx-1].",
+            "Each element is added to memo only after checking it against previously seen elements, so no element is paired with itself."
+          ],
+          "trap": [
+            "Adding the current number to memo before checking for its complement would incorrectly allow using the same element twice.",
+            "Must store indices, not just values, since the answer requires indices not the numbers themselves.",
+            "Duplicate values (e.g. [3,3], target=6) work correctly here because the first 3 is stored in memo before the second 3 is processed.",
+            "Brute-force nested loop gives O(n^2); the hash map approach is needed to meet the O(n) follow-up requirement."
+          ],
+          "recognition_clue": [
+            "Need to find a pair of elements satisfying a sum condition — classic complement-lookup setup.",
+            "'Exactly one solution exists' hints that a single pass with early return suffices.",
+            "Follow-up explicitly asks for better than O(n^2), pointing toward hashing instead of brute force."
+          ],
+          "complexity_time": "O(n)",
+          "complexity_space": "O(n)",
+          "takeaway": [
+            "When searching for pairs that satisfy a sum/difference condition, trade space for time by hashing seen elements and checking complements in a single pass."
+          ]
+        }
       }
     ]
   }

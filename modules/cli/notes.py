@@ -9,15 +9,13 @@ import structlog
 
 from modules.ai_prefill import AIPrefillGenerator, AIProviderError, PrefillGenerationError
 from modules.ai_prefill.settings import ai_prefill_settings
-from modules.render.markdown_notes import LeetCodeDSAProblemNotesRender
+from modules.render.markdown_notes import LeetCodeDSAProblemNotesRender, PrefillMissingError
 from modules.render.utils import FileVariant, NotesStyle
 
 from .common import CircuitBreaker, get_manager, print_batch_summary
 from .root import cli
 
 logger = structlog.get_logger(__name__)
-
-_AI_STYLES = {NotesStyle.PLAIN_AI.value, NotesStyle.OBSIDIAN_AI.value}
 
 
 @cli.group()
@@ -38,7 +36,8 @@ def notes() -> None:
     type=click.Choice([s.value for s in NotesStyle]),
     default=NotesStyle.PLAIN.value,
     show_default=True,
-    help="'plain' and 'obsidian' are implemented; the '+ai' styles are reserved for a later prefill step.",
+    help="'+ai' styles pull in the latest stored AI prefill content — run "
+    "'notes prefill SLUG' first, or generation fails with a clear error.",
 )
 @click.option(
     "--link-variant",
@@ -74,11 +73,6 @@ def notes_render(
         raise click.UsageError("Pass either SLUG or --all, not both.")
     if not slug and not run_all:
         raise click.UsageError("Pass either SLUG or --all.")
-    if style in _AI_STYLES:
-        raise click.ClickException(
-            f"'{style}' is not implemented yet — AI prefill is a later task. "
-            f"Use '{NotesStyle.PLAIN.value}' or '{NotesStyle.OBSIDIAN.value}' for now."
-        )
 
     mgr = get_manager()
     renderer = LeetCodeDSAProblemNotesRender(
@@ -97,7 +91,11 @@ def notes_render(
                     f"no problem data found for '{slug}', run 'populate problem {slug}' first"
                 )
             log.info("notes_command_started")
-            _, status = renderer.save(record, force=force)
+            try:
+                _, status = renderer.save(record, force=force)
+            except PrefillMissingError as exc:
+                log.warning("notes_command_failed", reason="prefill_missing")
+                raise click.ClickException(str(exc))
             log.info("notes_command_succeeded", status=status)
             label = "done" if status == "written" else "skip"
             suffix = (
