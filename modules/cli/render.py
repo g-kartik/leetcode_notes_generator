@@ -28,15 +28,13 @@ logger = structlog.get_logger(__name__)
 )
 @click.option(
     "--output-base", "output_base", type=click.Path(path_type=Path), default=None,
-    help="Defaults to render_settings.DEFAULT_WRITE_DIR.",
+    help="Priority: this flag > OUTPUT_BASE_DIR (.env) > render_settings.DEFAULT_WRITE_DIR.",
 )
-@click.option("--obsidian/--no-obsidian", "obsidian", default=False)
 def render(
     slug: str | None,
     run_all: bool,
     variant: str,
     output_base: Path | None,
-    obsidian: bool,
 ) -> None:
     """Render a stored question into Markdown notes."""
     if slug and run_all:
@@ -48,7 +46,6 @@ def render(
     renderer = LeetCodeDSAProblemMarkdownRender(
         variant=FileVariant(variant),
         output_base=output_base,
-        write_to_obsidian_vault=obsidian,
     )
 
     if slug:

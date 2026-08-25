@@ -7,7 +7,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from modules.leetcode.storage.combined import CombinedQuestionRecord
 
 from .settings import render_settings
-from .utils import FileVariant, NotesStyle, dsa_root, sanitized_filename
+from .utils import FileVariant, NotesStyle, notes_root, problems_root, sanitized_filename
 
 logger = structlog.get_logger(__name__)
 
@@ -20,18 +20,9 @@ _TEMPLATE_BY_STYLE = {
     NotesStyle.OBSIDIAN_AI: "leetcode_notes_obsidian.md.j2",
 }
 
-# AI styles share their base style's folder — prefilling a note later edits the
-# same file rather than producing a separate artifact.
-_FOLDER_BY_STYLE = {
-    NotesStyle.PLAIN: "plain",
-    NotesStyle.OBSIDIAN: "obsidian",
-    NotesStyle.PLAIN_AI: "plain",
-    NotesStyle.OBSIDIAN_AI: "obsidian",
-}
-
 # No AI prefill step exists yet, so every section renders as an empty
 # placeholder for the user to fill in by hand — only frontmatter + the
-# problem/solution link are populated.
+# problem/solution link(s) are populated.
 _EMPTY_PREFILL = dict(
     aliases=[],
     pattern_tags=[],
@@ -53,7 +44,6 @@ class LeetCodeDSAProblemNotesRender:
         self,
         style: NotesStyle | str = NotesStyle.PLAIN,
         output_base: Path | str | None = None,
-        write_to_obsidian_vault: bool = False,
         link_variant: FileVariant = FileVariant.REMOTE,
     ):
         self.style = NotesStyle(style) if isinstance(style, str) else style
@@ -66,16 +56,12 @@ class LeetCodeDSAProblemNotesRender:
             raise ValueError("link_variant must be 'remote' or 'local', not 'all'")
 
         self.template_dir = render_settings.TEMPLATE_DIR
-        self.obsidian_vault = render_settings.OBSIDIAN_VAULT_DIR
-        self.write_to_obsidian = write_to_obsidian_vault
+        # Only used by the 'plain' style, which links a single problem-file variant.
+        # 'obsidian' always links both remote and local, regardless of this.
         self.link_variant = link_variant
 
-        # Base dir is caller-supplied, else falls back to the configured default.
-        self.output_base = (
-            Path(output_base)
-            if output_base is not None
-            else render_settings.DEFAULT_WRITE_DIR
-        )
+        # Priority: caller-supplied (CLI) > OUTPUT_BASE_DIR (.env) > DEFAULT_WRITE_DIR.
+        self.output_base = render_settings.resolve_base_dir(output_base)
 
         self.env = Environment(
             loader=FileSystemLoader(self.template_dir),
@@ -86,33 +72,34 @@ class LeetCodeDSAProblemNotesRender:
         self.template = self.env.get_template(_TEMPLATE_BY_STYLE[self.style])
 
         self.output_base.mkdir(parents=True, exist_ok=True)
-        if self.write_to_obsidian:
-            self.obsidian_vault.mkdir(parents=True, exist_ok=True)
 
-    def _notes_dir(self, base: Path) -> Path:
-        """<base>/LeetCode/DSA/notes/<plain|obsidian>."""
-        return dsa_root(base) / "notes" / _FOLDER_BY_STYLE[self.style]
-
-    def _problem_file_path(self, record: CombinedQuestionRecord, base: Path) -> Path:
-        """Absolute path to this record's already-rendered problem/solution file."""
+    def _problem_file_path(self, record: CombinedQuestionRecord, variant: FileVariant) -> Path:
+        """Absolute path to this record's already-rendered problem/solution file, for one variant."""
         filename = sanitized_filename(record.id, record.title)
-        root = dsa_root(base)
-        if self.link_variant == FileVariant.LOCAL:
+        root = problems_root(self.output_base)
+        if variant == FileVariant.LOCAL:
             if not record.slug:
                 raise ValueError("question slug cannot be null")
             return root / "local" / record.slug / filename
         return root / "remote" / filename
 
-    def render(self, record: CombinedQuestionRecord, base: Path) -> str:
-        """Renders a CombinedQuestionRecord into a notes Markdown string (frontmatter + link only, for now)."""
-        log = logger.bind(slug=record.slug)
-        problem_file = self._problem_file_path(record, base)
-        if not problem_file.exists():
+    def _tags(self, record: CombinedQuestionRecord) -> list[str]:
+        """Personal pattern tags + LeetCode question-tag slugs, deduped, in one list."""
+        question_tag_slugs = [t.get("slug") for t in (record.tags or []) if t.get("slug")]
+        return list(dict.fromkeys([*_EMPTY_PREFILL["pattern_tags"], *question_tag_slugs]))
+
+    def _warn_if_missing(self, path: Path, log) -> None:
+        if not path.exists():
             log.warning(
                 "notes_link_target_missing",
-                path=str(problem_file),
+                path=str(path),
                 hint="run the 'render' command for this slug first",
             )
+
+    def render(self, record: CombinedQuestionRecord) -> str:
+        """Renders a CombinedQuestionRecord into a notes Markdown string (frontmatter + problem link(s) only, for now)."""
+        log = logger.bind(slug=record.slug)
+        notes_dir = notes_root(self.output_base)
 
         context = dict(
             _EMPTY_PREFILL,
@@ -121,42 +108,41 @@ class LeetCodeDSAProblemNotesRender:
             title=record.title,
             difficulty=record.difficulty,
             url=record.url,
-            topics=record.tags or [],
-            problem_note_name=problem_file.stem,
-            problem_note_relpath=os.path.relpath(problem_file, start=self._notes_dir(base)),
+            tags=self._tags(record),
         )
+
+        if self.style == NotesStyle.OBSIDIAN:
+            # Obsidian wikilinks resolve relative to the vault root, not the note's
+            # own folder, and remote/local share the same filename — so both links
+            # need a full, disambiguating path from output_base (which, when the
+            # user points OUTPUT_BASE_DIR at their vault, IS the vault root).
+            remote_file = self._problem_file_path(record, FileVariant.REMOTE)
+            local_file = self._problem_file_path(record, FileVariant.LOCAL)
+            self._warn_if_missing(remote_file, log)
+            self._warn_if_missing(local_file, log)
+            context["problem_remote_link"] = remote_file.relative_to(self.output_base).with_suffix("").as_posix()
+            context["problem_local_link"] = local_file.relative_to(self.output_base).with_suffix("").as_posix()
+        else:
+            problem_file = self._problem_file_path(record, self.link_variant)
+            self._warn_if_missing(problem_file, log)
+            context["problem_note_name"] = problem_file.stem
+            context["problem_note_relpath"] = os.path.relpath(problem_file, start=notes_dir)
+
         rendered = self.template.render(**context)
-        log.info("notes_rendered", style=self.style.value, link_variant=self.link_variant.value)
+        log.info("notes_rendered", style=self.style.value)
         return rendered
 
-    def _save_to(self, record: CombinedQuestionRecord, base: Path) -> Path:
-        """Writes the notes file into <base>/LeetCode/DSA/notes/<style>/<file>.md."""
+    def save(self, record: CombinedQuestionRecord) -> Path:
+        """
+        Renders and saves the (single, style-agnostic) notes file for `record`
+        into <output_base>/Leetcode Notes/<file>.md. Re-running with a different
+        --style overwrites this same file — there's one notes file per problem.
+        """
         log = logger.bind(slug=record.slug)
-        notes_dir = self._notes_dir(base)
+        notes_dir = notes_root(self.output_base)
         notes_dir.mkdir(parents=True, exist_ok=True)
 
         output_file = notes_dir / sanitized_filename(record.id, record.title)
-        output_file.write_text(self.render(record, base), encoding="utf-8")
+        output_file.write_text(self.render(record), encoding="utf-8")
         log.info("notes_file_written", style=self.style.value, path=str(output_file))
         return output_file
-
-    def save(self, record: CombinedQuestionRecord) -> dict:
-        """
-        Renders and saves a notes file for `record` to output_base, and
-        additionally to the Obsidian vault if write_to_obsidian_vault=True.
-
-        Returns e.g.: {"output_base": Path(...), "obsidian": Path(...)}
-        """
-        log = logger.bind(slug=record.slug)
-        log.info(
-            "notes_save_started",
-            style=self.style.value,
-            write_to_obsidian=self.write_to_obsidian,
-        )
-
-        results = {"output_base": self._save_to(record, self.output_base)}
-        if self.write_to_obsidian:
-            results["obsidian"] = self._save_to(record, self.obsidian_vault)
-
-        log.info("notes_save_completed", style=self.style.value)
-        return results

@@ -1,64 +1,50 @@
 {# Personal study-notes template (plain Markdown, no Obsidian-specific syntax).
-   Data vars (from the sync pipeline): frontend_id, slug, title, difficulty, url, topics
+   Data vars (from the sync pipeline): frontend_id, slug, title, difficulty, url
+   Tag var: tags — personal pattern tags + LeetCode question-tag slugs, combined
    Linking vars: problem_note_name, problem_note_relpath
    Prefill vars (all optional — pass None/empty to leave blank for manual fill):
-     aliases, pattern_tags, problem_summary, pattern, core_idea, invariant,
+     aliases, problem_summary, pattern, core_idea, invariant,
      trap, recognition_clue, complexity_time, complexity_space, takeaway #}
 {% macro bullets(items) -%}
-{%- if items -%}
-{{ "- " ~ items | join("\n- ") }}
-{%- else -%}
--
-{%- endif -%}
+    {%- if items -%}
+        {{ "- " ~ items | join("\n- ") }}
+    {%- else -%}
+        -
+    {%- endif -%}
 {% endmacro -%}
 ---
 id: {{ frontend_id }}
 slug: {{ slug }}
 aliases: [{% for a in aliases %}"{{ a }}"{% if not loop.last %}, {% endif %}{% endfor %}]
 tags:
-{% for t in pattern_tags %}
-  - {{ t }}
+{% for t in tags %}
+      - {{ t }}
 {% endfor %}
 difficulty: {{ difficulty }}
 platform: LeetCode
 problem_link: "{{ url }}"
-topics:
-{% for topic in topics %}
-  - {{ topic.slug }}
-{% endfor %}
 ---
-
 # {{ frontend_id }}. {{ title }}
-
 🔗 **Problem & Solution:** [{{ problem_note_name }}]({{ problem_note_relpath }})
-
 ---
-
 **Problem:**
 {% if problem_summary %}
-> {{ problem_summary }}
+    > {{ problem_summary }}
 {% else %}
->
+    >
 {% endif %}
-
 **Pattern:**
 {{ bullets(pattern) }}
-
 **Core idea:**
 {{ bullets(core_idea) }}
-
 **Invariant:**
 {{ bullets(invariant) }}
-
 **Trap:**
 {{ bullets(trap) }}
-
 **Recognition clue:**
 {{ bullets(recognition_clue) }}
-
 **Complexity:**
 - Time: `{{ complexity_time or '' }}`
 - Space: `{{ complexity_space or '' }}`
-
 **My takeaway:**
 {{ bullets(takeaway) }}

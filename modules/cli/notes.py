@@ -38,16 +38,14 @@ _AI_STYLES = {NotesStyle.PLAIN_AI.value, NotesStyle.OBSIDIAN_AI.value}
 )
 @click.option(
     "--output-base", "output_base", type=click.Path(path_type=Path), default=None,
-    help="Defaults to render_settings.DEFAULT_WRITE_DIR.",
+    help="Priority: this flag > OUTPUT_BASE_DIR (.env) > render_settings.DEFAULT_WRITE_DIR.",
 )
-@click.option("--obsidian/--no-obsidian", "obsidian", default=False)
 def notes(
     slug: str | None,
     run_all: bool,
     style: str,
     link_variant: str,
     output_base: Path | None,
-    obsidian: bool,
 ) -> None:
     """Render a stored question into a study-notes file (frontmatter + problem link only, for now)."""
     if slug and run_all:
@@ -64,7 +62,6 @@ def notes(
     renderer = LeetCodeDSAProblemNotesRender(
         style=NotesStyle(style),
         output_base=output_base,
-        write_to_obsidian_vault=obsidian,
         link_variant=FileVariant(link_variant),
     )
 

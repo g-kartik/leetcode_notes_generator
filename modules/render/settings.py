@@ -10,18 +10,28 @@ class RendererSettings(BaseProjectSettings):
 
     DEFAULT_WRITE_DIR: Path = BaseProjectSettings.PROJECT_ROOT_DIR / "LOCAL_RENDER"
 
-    DSA_WRITE_DIR: Path = DEFAULT_WRITE_DIR / "LeetCode" / "DSA"
+    # Optional .env override for where rendered problems/notes live — e.g. point
+    # this straight at (a folder inside) an Obsidian vault. A CLI --output-base
+    # always wins over this; this is the fallback checked before DEFAULT_WRITE_DIR.
+    OUTPUT_BASE_DIR: Path | None = None
 
-    LOCAL_DSA_RENDER: Path = DSA_WRITE_DIR / "local"
-    REMOTE_DSA_RENDER: Path = DSA_WRITE_DIR / "remote"
-
-    OBSIDIAN_VAULT_DIR: Path
-
-
-    @field_validator("OBSIDIAN_VAULT_DIR",)
+    @field_validator("OUTPUT_BASE_DIR", mode="before")
     @classmethod
-    def expand_paths(cls, value: Path) -> Path:
-        return value.expanduser()
+    def _blank_to_none(cls, value: str | None) -> str | None:
+        return value or None
+
+    @field_validator("OUTPUT_BASE_DIR")
+    @classmethod
+    def _expand_output_base(cls, value: Path | None) -> Path | None:
+        return value.expanduser() if value is not None else None
+
+    def resolve_base_dir(self, cli_override: Path | str | None = None) -> Path:
+        """Base output dir, in priority order: CLI --output-base > OUTPUT_BASE_DIR (.env) > DEFAULT_WRITE_DIR."""
+        if cli_override is not None:
+            return Path(cli_override).expanduser()
+        if self.OUTPUT_BASE_DIR is not None:
+            return self.OUTPUT_BASE_DIR
+        return self.DEFAULT_WRITE_DIR
 
 
 render_settings = RendererSettings()

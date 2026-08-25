@@ -9,7 +9,7 @@ from modules.leetcode.storage.combined import CombinedQuestionRecord
 
 from .settings import render_settings
 from .utils import FileVariant as FV
-from .utils import dsa_root, sanitized_filename
+from .utils import problems_root, sanitized_filename
 
 logger = structlog.get_logger(__name__)
 
@@ -19,22 +19,15 @@ class LeetCodeDSAProblemMarkdownRender:
         self,
         variant: FV | str = FV.ALL,
         output_base: Path | str | None = None,
-        write_to_obsidian_vault: bool = False,
     ):
         self.template_dir = render_settings.TEMPLATE_DIR
         self.project_root = render_settings.PROJECT_ROOT_DIR
-        self.obsidian_vault = render_settings.OBSIDIAN_VAULT_DIR
         self.dsa_problems_assets_dir = leetcode_settings.DSA_PROBLEMS_ASSETS_DIR
 
         self.variant = FV(variant) if isinstance(variant, str) else variant
-        self.write_to_obsidian = write_to_obsidian_vault
 
-        # Base dir is caller-supplied, else falls back to the configured default.
-        self.output_base = (
-            Path(output_base)
-            if output_base is not None
-            else render_settings.DEFAULT_WRITE_DIR
-        )
+        # Priority: caller-supplied (CLI) > OUTPUT_BASE_DIR (.env) > DEFAULT_WRITE_DIR.
+        self.output_base = render_settings.resolve_base_dir(output_base)
 
         self.env = Environment(
             loader=FileSystemLoader(self.template_dir),
@@ -45,8 +38,6 @@ class LeetCodeDSAProblemMarkdownRender:
         self.template = self.env.get_template("leetcode_problem.md.j2")
 
         self.output_base.mkdir(parents=True, exist_ok=True)
-        if self.write_to_obsidian:
-            self.obsidian_vault.mkdir(parents=True, exist_ok=True)
 
     def render(self, record: CombinedQuestionRecord, variant: FV) -> str:
         """Renders a CombinedQuestionRecord into a Markdown string for a specific variant."""
@@ -76,13 +67,10 @@ class LeetCodeDSAProblemMarkdownRender:
     def _get_sanitized_filename(self, record: CombinedQuestionRecord) -> str:
         return sanitized_filename(record.id, record.title)
 
-    def _dsa_root(self, base: Path) -> Path:
-        return dsa_root(base)
-
-    def _save_remote(self, record: CombinedQuestionRecord, base: Path) -> Path:
-        """Writes remote variant into <base>/LeetCode/DSA/remote/<file>.md."""
+    def _save_remote(self, record: CombinedQuestionRecord, root: Path) -> Path:
+        """Writes remote variant into <root>/remote/<file>.md."""
         log = logger.bind(slug=record.slug)
-        remote_dir = self._dsa_root(base) / "remote"
+        remote_dir = root / "remote"
         remote_dir.mkdir(parents=True, exist_ok=True)
 
         output_file = remote_dir / self._get_sanitized_filename(record)
@@ -90,13 +78,13 @@ class LeetCodeDSAProblemMarkdownRender:
         log.info("variant_file_written", variant="remote", path=str(output_file))
         return output_file
 
-    def _save_local(self, record: CombinedQuestionRecord, base: Path) -> Path:
-        """Writes local variant into <base>/LeetCode/DSA/local/<slug>/<file>.md, with assets."""
+    def _save_local(self, record: CombinedQuestionRecord, root: Path) -> Path:
+        """Writes local variant into <root>/local/<slug>/<file>.md, with assets."""
         if not record.slug:
             raise ValueError("question slug cannot be null")
 
         log = logger.bind(slug=record.slug)
-        target_problem_dir = self._dsa_root(base) / "local" / record.slug
+        target_problem_dir = root / "local" / record.slug
         target_problem_dir.mkdir(parents=True, exist_ok=True)
 
         source_assets_dir = self.dsa_problems_assets_dir / record.slug / "assets"
@@ -116,39 +104,26 @@ class LeetCodeDSAProblemMarkdownRender:
         log.info("variant_file_written", variant="local", path=str(output_file))
         return output_file
 
-    def _save_variant(self, record: CombinedQuestionRecord, variant: FV, base: Path) -> Path:
+    def _save_variant(self, record: CombinedQuestionRecord, variant: FV, root: Path) -> Path:
         return (
-            self._save_local(record, base)
+            self._save_local(record, root)
             if variant == FV.LOCAL
-            else self._save_remote(record, base)
+            else self._save_remote(record, root)
         )
 
     def save(self, record: CombinedQuestionRecord) -> dict:
         """
-        Renders and saves `record` to output_base, and additionally to the
-        Obsidian vault if write_to_obsidian=True. Both destinations share the
-        same LeetCode/DSA/<variant>/... internal structure.
+        Renders and saves `record` under <output_base>/Leetcode Problems/<variant>/....
 
-        Returns e.g.:
-            {"local": {"output_base": Path(...), "obsidian": Path(...)}}
-        or, when variant is ALL:
-            {"local": {...}, "remote": {...}}
+        Returns e.g.: {"local": Path(...), "remote": Path(...)}
         """
         log = logger.bind(slug=record.slug)
         variants = [FV.LOCAL, FV.REMOTE] if self.variant == FV.ALL else [self.variant]
+        root = problems_root(self.output_base)
 
-        log.info(
-            "render_save_started",
-            variants=[v.value for v in variants],
-            write_to_obsidian=self.write_to_obsidian,
-        )
+        log.info("render_save_started", variants=[v.value for v in variants])
 
-        results = {}
-        for v in variants:
-            targets = {"output_base": self._save_variant(record, v, self.output_base)}
-            if self.write_to_obsidian:
-                targets["obsidian"] = self._save_variant(record, v, self.obsidian_vault)
-            results[v.value if hasattr(v, "value") else str(v)] = targets
+        results = {v.value: self._save_variant(record, v, root) for v in variants}
 
         log.info("render_save_completed", variants=list(results.keys()))
         return results

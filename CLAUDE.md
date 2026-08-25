@@ -36,8 +36,12 @@ class subclasses it and adds its own `env_prefix`:
   leetcode.com), and on-disk paths for the JSON "database" and cached assets
   (`LEETCODE_DATA/dsa_problems/db.json`, `.../solved_slugs_cache.json`, `.../assets/`).
 - `modules/render/settings.py` — `RendererSettings`: template dir, default output dir
-  (`LOCAL_RENDER/`), and `OBSIDIAN_VAULT_DIR` (required, no `LEETCODE_` prefix — note it's
-  a *different* env var namespace than the leetcode settings).
+  (`LOCAL_RENDER/` in the project root), and an optional `OUTPUT_BASE_DIR` override (no
+  `LEETCODE_` prefix — a different env var namespace than the leetcode settings). Base-dir
+  resolution priority, via `RendererSettings.resolve_base_dir()`: a CLI `--output-base` >
+  `OUTPUT_BASE_DIR` (.env) > `DEFAULT_WRITE_DIR`. Point `OUTPUT_BASE_DIR` at (a folder inside)
+  an Obsidian vault to have problems/notes render straight into it — there's no separate
+  vault-mirroring mechanism.
 
 When adding a new module that needs config, follow this same pattern: subclass
 `BaseProjectSettings` from the root `settings.py`, give it its own `env_prefix`.
@@ -98,9 +102,26 @@ Markdown note via `templates/leetcode_problem.md.j2`, in one or both of two vari
 - `local` — uses `content.local_markdown` (rewritten to the locally-downloaded image paths)
   and also copies that problem's `assets/` folder alongside the note.
 
-Output always follows the fixed structure `<base>/LeetCode/DSA/<variant>/...`, written under
-`LOCAL_RENDER/` by default and, when `write_to_obsidian_vault=True`, mirrored into
-`OBSIDIAN_VAULT_DIR` as well (both destinations get the same relative structure).
+`markdown_notes.py` (`LeetCodeDSAProblemNotesRender`) renders a separate, personal study-notes
+file per problem — frontmatter (tags = personal pattern tags + LeetCode topic-tag slugs,
+deduped) plus a link back to the rendered problem/solution file(s); the content sections
+(pattern, core idea, invariant, trap, ...) are prefillable but currently always left blank for
+the user to fill in by hand (AI prefill is a later task). Four styles
+(`modules/render/utils.py::NotesStyle`): `plain` and `obsidian` are implemented; `plain+ai` and
+`obsidian+ai` raise `NotImplementedError` until prefill exists. `obsidian` always links *both*
+the remote and local problem files via `[[wikilink]]`, using the path relative to `output_base`
+(disambiguating them, since they share a filename); `plain` links whichever single variant
+`--link-variant` picks, via a relative Markdown link.
+
+Both renderers write under one resolved base directory (`RendererSettings.resolve_base_dir()`
+— see Configuration above) in a fixed internal structure:
+```
+<base>/Leetcode Problems/remote/<file>.md
+<base>/Leetcode Problems/local/<slug>/<file>.md   (+ assets/)
+<base>/Leetcode Notes/<file>.md
+```
+There's one notes file per problem regardless of style — regenerating with a different
+`--style` overwrites it rather than creating a separate file.
 
 ### Logging
 

@@ -1,55 +1,42 @@
 {# Personal study-notes template with Obsidian features (wikilinks, callouts).
-   Data vars (from the sync pipeline): frontend_id, slug, title, difficulty, url, topics
-   Linking vars: problem_note_name (used as the [[wikilink]] target)
+   Data vars (from the sync pipeline): frontend_id, slug, title, difficulty, url
+   Tag var: tags — personal pattern tags + LeetCode question-tag slugs, combined
+   Linking vars: problem_remote_link, problem_local_link — vault-relative wikilink
+     targets (no extension) for the two already-rendered problem/solution files
    Prefill vars (all optional — pass None/empty to leave blank for manual fill):
-     aliases, pattern_tags, related, problem_summary, pattern, core_idea, invariant,
+     aliases, related, problem_summary, pattern, core_idea, invariant,
      trap, recognition_clue, complexity_time, complexity_space, takeaway #}
 {% macro bullets(items) -%}
-{%- if items -%}
-{{ "- " ~ items | join("\n- ") }}
-{%- else -%}
--
-{%- endif -%}
+    {%- if items -%}
+        {{ "- " ~ items | join("\n- ") }}
+    {%- else -%}
+        -
+    {%- endif -%}
 {% endmacro -%}
 {% macro callout(kind, text) -%}
-> [!{{ kind }}]
-> {{ text or '' }}
+    > [!{{ kind }}]
+    > {{ text or '' }}
 {%- endmacro -%}
-{% macro callout_bullets(kind, items) -%}
-> [!{{ kind }}]
-{%- if items -%}
-{{ "\n> - " ~ items | join("\n> - ") }}
-{%- else -%}
-{{ "\n> -" }}
-{%- endif -%}
-{% endmacro -%}
 ---
 id: {{ frontend_id }}
 slug: {{ slug }}
 aliases: [{% for a in aliases %}"{{ a }}"{% if not loop.last %}, {% endif %}{% endfor %}]
 tags:
-{% for t in pattern_tags %}
-  - {{ t }}
+{% for t in tags %}
+          - {{ t }}
 {% endfor %}
 difficulty: {{ difficulty }}
 platform: LeetCode
 problem_link: "{{ url }}"
-topics:
-{% for topic in topics %}
-  - {{ topic.slug }}
-{% endfor %}
 {% if related %}
-related:
-{% for r in related %}
-  - "[[{{ r }}]]"
-{% endfor %}
+        related:
+        {% for r in related %}
+              - "[[{{ r }}]]"
+        {% endfor %}
 {% endif %}
 ---
-
 # {{ frontend_id }}. {{ title }}
-
-🔗 **Problem & Solution:** [[{{ problem_note_name }}]]
-
+🔗 **Problem & Solution:** [[{{ problem_remote_link }}|Remote]] · [[{{ problem_local_link }}|Local]]
 ---
 
 **Problem:**
@@ -65,7 +52,7 @@ related:
 {{ bullets(invariant) }}
 
 **Trap:**
-{{ callout_bullets('warning', trap) }}
+{{ bullets(trap) }}
 
 **Recognition clue:**
 {{ bullets(recognition_clue) }}
@@ -78,10 +65,9 @@ related:
 {{ bullets(takeaway) }}
 {% if related %}
 
----
-
-**Related:**
-{% for r in related %}
-- [[{{ r }}]]
-{% endfor %}
+        ---
+    **Related:**
+    {% for r in related %}
+        - [[{{ r }}]]
+    {% endfor %}
 {% endif %}

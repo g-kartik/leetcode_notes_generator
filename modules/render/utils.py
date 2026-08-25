@@ -23,6 +23,11 @@ def sanitized_filename(frontend_id: int | None, title: str | None) -> str:
     ).rstrip()
 
 
-def dsa_root(base: Path) -> Path:
-    """The fixed internal structure root shared by every renderer: <base>/LeetCode/DSA."""
-    return base / "LeetCode" / "DSA"
+def problems_root(base: Path) -> Path:
+    """<base>/Leetcode Problems — root for both the remote and local problem/solution files."""
+    return base / "Leetcode Problems"
+
+
+def notes_root(base: Path) -> Path:
+    """<base>/Leetcode Notes — root for the single, style-agnostic notes file per problem."""
+    return base / "Leetcode Notes"
