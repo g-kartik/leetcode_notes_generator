@@ -1,8 +1,8 @@
 import requests
 import structlog
-from requests_ratelimiter import LimiterAdapter
 from urllib3.util import Retry
 
+from modules.leetcode.rate_limiting import JitteredLimiterAdapter
 from modules.leetcode.settings import leetcode_settings
 
 logger = structlog.get_logger(__name__)
@@ -25,15 +25,22 @@ class LeetCodeClient:
             raise_on_status=False,
         )
 
-        # 2. Rate Limiting Adapter (e.g., max 2 requests per second)
-        rate_limiter = LimiterAdapter(
-            per_second=2,
+        # 2. Rate Limiting Adapter, plus jitter — see rate_limiting.py for why.
+        rate_limiter = JitteredLimiterAdapter(
+            per_second=self.settings.REQUESTS_PER_SECOND,
             max_retries=retries,
         )
 
         # Mount the rate limiter and retries on all HTTP/HTTPS endpoints
         self.session.mount("https://", rate_limiter)
         self.session.mount("http://", rate_limiter)
+
+        logger.info(
+            "http_session_configured",
+            requests_per_second=self.settings.REQUESTS_PER_SECOND,
+            jitter_range=rate_limiter.jitter_range,
+            max_retries=retries.total,
+        )
 
         # Configure Headers and Cookies
         self.session.headers.update(

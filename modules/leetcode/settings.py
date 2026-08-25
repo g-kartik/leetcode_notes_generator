@@ -21,6 +21,11 @@ class LeetCodeSettings(BaseProjectSettings):
 
     ENDPOINT_ALL_PROBLEMS: str = f"{BASE_URL}/api/problems/all/"
 
+    # Kept conservative on purpose — a large batch run (e.g. populating hundreds
+    # of solved problems in one sitting) is exactly the traffic shape abuse
+    # detection looks for. See modules/leetcode/rate_limiting.py.
+    REQUESTS_PER_SECOND: float = 1.0
+
     DATA_STORAGE_DIR: Path = BaseProjectSettings.PROJECT_ROOT_DIR / "LEETCODE_DATA"
     PROBLEMS_DATA_DIR: Path = DATA_STORAGE_DIR / "dsa_problems"
 
