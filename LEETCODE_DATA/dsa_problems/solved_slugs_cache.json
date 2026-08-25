@@ -1,872 +1,667 @@
 {
   "maximum-sum-of-distinct-subarrays-with-length-k": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "number-of-unique-subjects-taught-by-each-teacher": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "employees-whose-manager-left-the-company": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "confirmation-rate": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "count-salary-categories": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "primary-department-for-each-employee": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "recyclable-and-low-fat-products": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "the-number-of-employees-which-report-to-each-employee": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "find-followers-count": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "invalid-tweets": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "fix-names-in-a-table": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "average-time-of-process-per-machine": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "percentage-of-users-attended-a-contest": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "customer-who-visited-but-did-not-make-any-transactions": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "patients-with-a-condition": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "find-users-with-valid-e-mails": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "group-sold-products-by-the-date": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "count-good-nodes-in-binary-tree": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "replace-employee-id-with-the-unique-identifier": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "movie-rating": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "list-the-products-ordered-in-a-period": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "restaurant-growth": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "students-and-examinations": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "average-selling-price": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "queries-quality-and-percentage": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "last-person-to-fit-in-the-bus": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "monthly-transactions-i": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "immediate-food-delivery-ii": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "product-price-at-a-given-date": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "article-views-i": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "user-activity-for-the-past-30-days-i": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "game-play-analysis-iv": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "project-employees-i": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "product-sales-analysis-iii": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "product-sales-analysis-i": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "customers-who-bought-all-products": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "time-based-key-value-store": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "koko-eating-bananas": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "car-fleet": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "binary-search": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "sliding-puzzle": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "open-the-lock": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "find-smallest-letter-greater-than-target": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "daily-temperatures": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "average-of-levels-in-binary-tree": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "exchange-seats": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "not-boring-movies": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "biggest-single-number": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "triangle-judgement": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "friend-requests-ii-who-has-the-most-friends": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "classes-with-at-least-5-students": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "big-countries": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "investments-in-2016": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "find-customer-referee": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "employee-bonus": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "managers-with-at-least-5-direct-reports": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "minimum-number-of-arrows-to-burst-balloons": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "is-subsequence": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "ransom-note": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "insert-delete-getrandom-o1": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "top-k-frequent-elements": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "coin-change": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "serialize-and-deserialize-binary-tree": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "word-pattern": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "game-of-life": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "h-index": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "valid-anagram": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "product-of-array-except-self": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "summary-ranges": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "invert-binary-tree": {
-    "question": false,
-    "images": false,
-    "submission": false
-  },
-  "count-complete-tree-nodes": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "contains-duplicate-ii": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "contains-duplicate": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "minimum-size-subarray-sum": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "course-schedule": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "reverse-linked-list": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "isomorphic-strings": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "happy-number": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "binary-tree-right-side-view": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "rising-temperature": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "delete-duplicate-emails": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "number-of-1-bits": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "reverse-bits": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "rotate-array": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "department-top-three-salaries": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "department-highest-salary": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "consecutive-numbers": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "second-highest-salary": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "majority-element": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "two-sum-ii-input-array-is-sorted": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "find-peak-element": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "min-stack": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "find-minimum-in-rotated-sorted-array": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "reverse-words-in-a-string": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "evaluate-reverse-polish-notation": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "lru-cache": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "linked-list-cycle": {
-    "question": false,
-    "images": false,
-    "submission": false
-  },
-  "copy-list-with-random-pointer": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "single-number": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "candy": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "gas-station": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "surrounded-regions": {
-    "question": false,
-    "images": false,
-    "submission": false
-  },
-  "sum-root-to-leaf-numbers": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "longest-consecutive-sequence": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "valid-palindrome": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "best-time-to-buy-and-sell-stock-ii": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "best-time-to-buy-and-sell-stock": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "flatten-binary-tree-to-linked-list": {
-    "question": false,
-    "images": false,
-    "submission": false
-  },
-  "path-sum": {
-    "question": false,
-    "images": false,
-    "submission": false
-  },
-  "minimum-depth-of-binary-tree": {
-    "question": false,
-    "images": false,
-    "submission": false
-  },
-  "balanced-binary-tree": {
-    "question": false,
-    "images": false,
-    "submission": false
-  },
-  "construct-binary-tree-from-inorder-and-postorder-traversal": {
-    "question": false,
-    "images": false,
-    "submission": false
-  },
-  "construct-binary-tree-from-preorder-and-inorder-traversal": {
-    "question": false,
-    "images": false,
-    "submission": false
-  },
-  "maximum-depth-of-binary-tree": {
-    "question": false,
-    "images": false,
-    "submission": false
-  },
-  "binary-tree-zigzag-level-order-traversal": {
-    "question": false,
-    "images": false,
-    "submission": false
-  },
-  "binary-tree-level-order-traversal": {
-    "question": false,
-    "images": false,
-    "submission": false
-  },
-  "symmetric-tree": {
-    "question": false,
-    "images": false,
-    "submission": false
-  },
-  "same-tree": {
-    "question": false,
-    "images": false,
-    "submission": false
-  },
-  "reverse-linked-list-ii": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "decode-ways": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "subsets-ii": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "merge-sorted-array": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "partition-list": {
-    "question": false,
-    "images": false,
-    "submission": false
-  },
-  "largest-rectangle-in-histogram": {
-    "question": false,
-    "images": false,
-    "submission": false
-  },
-  "remove-duplicates-from-sorted-list-ii": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "remove-duplicates-from-sorted-array-ii": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "word-search": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "subsets": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "combinations": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "minimum-window-substring": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "search-a-2d-matrix": {
-    "question": false,
-    "images": false,
-    "submission": false
-  },
-  "set-matrix-zeroes": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "simplify-path": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "sqrtx": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "text-justification": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "add-binary": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "plus-one": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "minimum-path-sum": {
-    "question": false,
-    "images": false,
-    "submission": false
-  },
-  "rotate-list": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "length-of-last-word": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "insert-interval": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "merge-intervals": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "jump-game": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "spiral-matrix": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "maximum-subarray": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "group-anagrams": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "rotate-image": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "permutations-ii": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "jump-game-ii": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "trapping-rain-water": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "combination-sum-ii": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "combination-sum": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "valid-sudoku": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "search-insert-position": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "find-first-and-last-position-of-element-in-sorted-array": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "search-in-rotated-sorted-array": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "substring-with-concatenation-of-all-words": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "find-the-index-of-the-first-occurrence-in-a-string": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "remove-element": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "remove-duplicates-from-sorted-array": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "reverse-nodes-in-k-group": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "generate-parentheses": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "merge-two-sorted-lists": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "valid-parentheses": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
-  },
-  "remove-nth-node-from-end-of-list": {
-    "question": false,
-    "images": false,
-    "submission": false
-  },
-  "letter-combinations-of-a-phone-number": {
-    "question": false,
-    "images": false,
-    "submission": false
+    "submission": true
   },
   "3sum": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "longest-common-prefix": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "roman-to-integer": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "integer-to-roman": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "palindrome-number": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "zigzag-conversion": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
   "longest-substring-without-repeating-characters": {
-    "question": false,
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   },
-  "add-two-numbers": {
-    "question": false,
+  "two-sum": {
+    "question": true,
     "images": false,
-    "submission": false
+    "submission": true
   }
 }

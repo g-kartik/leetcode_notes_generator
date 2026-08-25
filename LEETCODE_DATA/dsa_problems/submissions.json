@@ -5,6 +5,1056 @@
       "lang": "python3",
       "code": "from typing import List\n\n\nclass Solution:\n    def maxArea(self, height: List[int]) -> int:\n        left = 0\n        right = len(height) - 1\n\n        max_water = 0\n        while left < right:\n            l = right - left\n            h = min(height[left], height[right])\n\n            water = l * h\n\n            max_water = max(max_water, water)\n\n            if height[left] <= height[right]:\n                left += 1\n            else:\n                right -= 1\n\n        return max_water\n\n\nsol = Solution().maxArea([1, 8, 6, 2, 5, 4, 8, 3, 7])\nprint(sol)\n",
       "submission_date": "2025-12-06T07:49:40Z"
+    },
+    "maximum-sum-of-distinct-subarrays-with-length-k": {
+      "slug": "maximum-sum-of-distinct-subarrays-with-length-k",
+      "lang": "python3",
+      "code": "from collections import defaultdict\nclass Solution:\n    def maximumSubarraySum(self, nums: List[int], k: int) -> int:\n        result = 0\n        left = 0\n        right = 0\n\n        window = set()\n        window_sum = 0\n\n        while right < len(nums):\n            while nums[right] in window:\n                window_sum -= nums[left]\n                window.remove(nums[left])\n                left += 1\n\n            window.add(nums[right])\n            window_sum += nums[right]\n\n            if len(window) > k:\n                window.remove(nums[left])\n                window_sum -= nums[left]\n                left += 1\n\n            if len(window) == k:\n                result = max(result, window_sum)\n\n            right += 1\n\n        return result",
+      "submission_date": "2025-03-23T02:15:21Z"
+    },
+    "number-of-unique-subjects-taught-by-each-teacher": {
+      "slug": "number-of-unique-subjects-taught-by-each-teacher",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect teacher_id, count(distinct(subject_id)) as cnt from Teacher group by teacher_id;",
+      "submission_date": "2026-05-27T02:55:25Z"
+    },
+    "employees-whose-manager-left-the-company": {
+      "slug": "employees-whose-manager-left-the-company",
+      "lang": "postgresql",
+      "code": "-- SELECT\n--     m.employee_id\n-- FROM Employees AS m\n-- LEFT JOIN Employees AS e\n--     ON m.manager_id = e.employee_id\n-- WHERE\n--     e.employee_id IS NULL\n--     AND m.manager_id IS NOT NULL\n--     AND m.salary < 30000\n-- ORDER BY\n--     m.employee_id;\n\n\nSELECT employee_id\nFROM Employees\nWHERE salary < 30000\nAND manager_id NOT IN (\n  SELECT employee_id FROM Employees\n)\nORDER BY employee_id;\n",
+      "submission_date": "2026-06-06T04:42:20Z"
+    },
+    "confirmation-rate": {
+      "slug": "confirmation-rate",
+      "lang": "mysql",
+      "code": "# Write your MySQL query statement below\n\nselect S.user_id, coalesce(round((Confirmed.confirmed/Total.total), 2), 0) as confirmation_rate\nfrom Signups as S\nleft join (\n    select user_id, count(user_id) as total\n    from Confirmations as C group by user_id\n) as Total\n    on S.user_id = Total.user_id\nleft join (\n    select user_id, count(action) as confirmed\n    from Confirmations as C group by user_id, action having action='confirmed'\n) as Confirmed\n    on S.user_id = Confirmed.user_id\n\n\n\n\n",
+      "submission_date": "2026-05-21T05:20:38Z"
+    },
+    "count-salary-categories": {
+      "slug": "count-salary-categories",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect c.category, COALESCE(accounts_count, 0) as accounts_count from (\n    VALUES\n        ('Low Salary'),\n        ('Average Salary'),\n        ('High Salary')\n) as c(category) LEFT JOIN (\n    select\n        case\n            when income < 20000 then 'Low Salary'\n            when income between 20000 and 50000 then 'Average Salary'\n            else 'High Salary'\n        end as category,\n        count(*) as accounts_count\n    from Accounts group by category\n) as a ON c.category=a.category ",
+      "submission_date": "2026-06-04T03:08:30Z"
+    },
+    "primary-department-for-each-employee": {
+      "slug": "primary-department-for-each-employee",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nSELECT\n    employee_id\n\t,department_id\nFROM Employee\nWHERE employee_id IN (\n\t\tSELECT employee_id\n\t\tFROM Employee\n\t\tGROUP BY employee_id\n\t\tHAVING count(*) = 1\n\t)\n\nUNION ALL\n\nSELECT employee_id\n\t,department_id\nFROM Employee\nWHERE primary_flag = 'Y';",
+      "submission_date": "2026-05-30T05:39:53Z"
+    },
+    "recyclable-and-low-fat-products": {
+      "slug": "recyclable-and-low-fat-products",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect product_id from Products where low_fats='Y' and recyclable='Y';",
+      "submission_date": "2026-05-16T03:00:10Z"
+    },
+    "the-number-of-employees-which-report-to-each-employee": {
+      "slug": "the-number-of-employees-which-report-to-each-employee",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\n\nSELECT employee_id\n\t,name\n\t,cnt AS reports_count\n\t,avg_age AS average_age\nFROM Employees E\nJOIN (\n\tSELECT reports_to as manager_id\n\t\t,count(*) AS cnt\n\t\t,round(AVG(age)) AS avg_age\n\tFROM Employees\n\tGROUP BY reports_to\n\tHAVING count(*) >= 1\n\t) AS M ON E.employee_id = M.manager_id\nORDER BY employee_id\n",
+      "submission_date": "2026-05-29T03:58:33Z"
+    },
+    "find-followers-count": {
+      "slug": "find-followers-count",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect user_id, count(*) as followers_count from Followers group by user_id order by user_id;",
+      "submission_date": "2026-05-29T02:56:36Z"
+    },
+    "invalid-tweets": {
+      "slug": "invalid-tweets",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect tweet_id from Tweets where LENGTH(content)>15;",
+      "submission_date": "2026-05-16T03:21:27Z"
+    },
+    "fix-names-in-a-table": {
+      "slug": "fix-names-in-a-table",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect user_id, upper(substring(name from 1 for 1)) || lower(substring(name from 2 for length(name))) as name from Users order by user_id",
+      "submission_date": "2026-06-12T03:40:09Z"
+    },
+    "average-time-of-process-per-machine": {
+      "slug": "average-time-of-process-per-machine",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nSELECT\n    machine_id,\n    ROUND(AVG(process_time)::numeric, 3) as processing_time\nFROM (\n    SELECT\n        s.machine_id,\n        s.process_id,\n        (e.timestamp - s.timestamp) as process_time\n    FROM\n        Activity as s, Activity as e\n    WHERE\n        s.activity_type = 'start' and\n        e.activity_type = 'end' and\n        s.process_id = e.process_id and\n        s.machine_id = e.machine_id\n)\nGROUP BY machine_id\n",
+      "submission_date": "2026-05-19T04:04:38Z"
+    },
+    "percentage-of-users-attended-a-contest": {
+      "slug": "percentage-of-users-attended-a-contest",
+      "lang": "postgresql",
+      "code": "-- Write your MySQL query statement below\nselect r.contest_id, round((count(r.user_id)*100.0/(select count(*) from Users)), 2) as percentage from Register r\ngroup by r.contest_id\norder by percentage desc, r.contest_id",
+      "submission_date": "2026-05-23T08:04:46Z"
+    },
+    "customer-who-visited-but-did-not-make-any-transactions": {
+      "slug": "customer-who-visited-but-did-not-make-any-transactions",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect customer_id, COUNT(*) as count_no_trans from \nVisits as V left join Transactions as T on V.visit_id=T.visit_id \nwhere T.visit_id is null group by customer_id;",
+      "submission_date": "2026-05-17T04:56:37Z"
+    },
+    "patients-with-a-condition": {
+      "slug": "patients-with-a-condition",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\n\n-- SELECT\n--     patient_id,\n--     patient_name,\n--     conditions\n-- FROM Patients p\n-- CROSS JOIN LATERAL (\n--     SELECT unnest(string_to_array(p.conditions, ' ')) AS word\n-- )\n-- WHERE word LIKE 'DIAB1%';\n\nSELECT *\nFROM Patients\nWHERE conditions LIKE 'DIAB1%'\n   OR conditions LIKE '% DIAB1%';",
+      "submission_date": "2026-06-12T04:24:42Z"
+    },
+    "find-users-with-valid-e-mails": {
+      "slug": "find-users-with-valid-e-mails",
+      "lang": "postgresql",
+      "code": "SELECT *\nFROM Users\nWHERE mail ~ '^[A-Za-z][\\w.-]*@leetcode\\.com$';",
+      "submission_date": "2026-06-13T03:03:41Z"
+    },
+    "group-sold-products-by-the-date": {
+      "slug": "group-sold-products-by-the-date",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nSELECT\n    sell_date,\n    COUNT(*) AS num_sold,\n    STRING_AGG(product, ',' ORDER BY product) AS products\nFROM (\n    SELECT DISTINCT\n        sell_date,\n        product\n    FROM Activities\n)\nGROUP BY sell_date\nORDER BY sell_date;\n\n",
+      "submission_date": "2026-06-13T02:25:36Z"
+    },
+    "count-good-nodes-in-binary-tree": {
+      "slug": "count-good-nodes-in-binary-tree",
+      "lang": "python3",
+      "code": "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def dfs(self, root, max_val=float('-inf')):\n        if root is None:\n            return 0\n\n        current_count = 1 if root.val >= max_val else 0\n        current_max = max(root.val, max_val)\n\n        left_goods = self.dfs(root.left, current_max)\n        right_goods = self.dfs(root.right, current_max)\n\n        return left_goods + right_goods + current_count\n\n    def goodNodes(self, root: TreeNode) -> int:\n        return self.dfs(root)\n\n        ",
+      "submission_date": "2025-05-31T01:58:44Z"
+    },
+    "replace-employee-id-with-the-unique-identifier": {
+      "slug": "replace-employee-id-with-the-unique-identifier",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect \"unique_id\", \"name\" from Employees as emp left join EmployeeUNI as empuni on emp.id=empuni.id",
+      "submission_date": "2026-05-17T03:56:20Z"
+    },
+    "movie-rating": {
+      "slug": "movie-rating",
+      "lang": "postgresql",
+      "code": "(\n    WITH cte AS (\n        SELECT\n            user_id,\n            COUNT(*) AS rating\n        FROM MovieRating\n        GROUP BY user_id\n    )\n    SELECT\n        name AS results\n    FROM cte\n    LEFT JOIN Users\n        ON cte.user_id = Users.user_id\n    WHERE rating = (\n        SELECT MAX(rating)\n        FROM cte\n    )\n    ORDER BY name\n    LIMIT 1\n)\n\nUNION ALL\n\n(\n    WITH c AS (\n        SELECT\n            movie_id,\n            AVG(rating) AS avg\n        FROM MovieRating\n        WHERE EXTRACT(YEAR FROM created_at) = 2020\n          AND EXTRACT(MONTH FROM created_at) = 2\n        GROUP BY movie_id\n    )\n    SELECT\n        title AS results\n    FROM c\n    LEFT JOIN Movies m\n        ON c.movie_id = m.movie_id\n    WHERE avg = (\n        SELECT MAX(avg)\n        FROM c\n    )\n    ORDER BY title\n    LIMIT 1\n);",
+      "submission_date": "2026-06-07T05:20:18Z"
+    },
+    "list-the-products-ordered-in-a-period": {
+      "slug": "list-the-products-ordered-in-a-period",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nSELECT\n    product_name,\n    SUM(unit) AS unit\nFROM (\n    SELECT\n        product_name,\n        unit\n    FROM Orders\n    LEFT JOIN Products USING (product_id)\n    WHERE DATE_PART('year', order_date) = 2020\n      AND DATE_PART('month', order_date) = 2\n)\nGROUP BY product_name\nHAVING SUM(unit) >= 100;",
+      "submission_date": "2026-06-13T02:41:56Z"
+    },
+    "restaurant-growth": {
+      "slug": "restaurant-growth",
+      "lang": "postgresql",
+      "code": "-- d.visited_on+6 as visited_on, sum(amount) as amount, round(avg(amount), 2) as average_amount\nSELECT\n    d.visited_on+6 as visited_on,\n    SUM(c.amount) AS amount,\n    ROUND(SUM(c.amount) / 7.0, 2) AS average_amount\nFROM (\n    SELECT DISTINCT visited_on\n    FROM Customer\n) AS d\nJOIN Customer c\n    ON c.visited_on BETWEEN d.visited_on AND d.visited_on + 6\nWHERE d.visited_on + 6 <= (\n    SELECT MAX(visited_on)\n    FROM Customer\n)\nGROUP BY d.visited_on\nORDER BY d.visited_on;",
+      "submission_date": "2026-06-08T06:30:44Z"
+    },
+    "students-and-examinations": {
+      "slug": "students-and-examinations",
+      "lang": "mysql",
+      "code": "# Write your MySQL query statement below\nselect s.student_id,\n        s.student_name,\n        sub.subject_name,\n        Count(e.student_id) as attended_exams\nfrom Students as s\n    cross join Subjects as sub\n    left join Examinations as e\n    on\n        s.student_id = e.student_id and\n        sub.subject_name = e.subject_name\ngroup by\n        s.student_id, s.student_name, sub.subject_name\norder by\n        s.student_id, s.student_name, sub.subject_name",
+      "submission_date": "2026-05-21T04:19:02Z"
+    },
+    "average-selling-price": {
+      "slug": "average-selling-price",
+      "lang": "mysql",
+      "code": "# Write your MySQL query statement below\n\nselect P.product_id, IFNULL(round(sum(P.price*US.units)/sum(US.units), 2), 0) as average_price from Prices P left join UnitsSold US\non P.product_id=US.product_id AND US.purchase_date between P.start_date and P.end_date\ngroup by P.product_id\n-- SELECT \n--     Ids.product_id,\n-- \tcoalesce(Calc.average_price, 0) as average_price\n-- FROM (\n-- \tSELECT DISTINCT (product_id)\n-- \tFROM Prices\n-- \t) AS Ids\n-- LEFT JOIN (\n-- \tSELECT US.product_id\n-- \t\t,round(sum(US.units * P.price)/sum(US.units), 2) AS average_price\n-- \tFROM UnitsSold US\n-- \tLEFT JOIN Prices P ON US.product_id = P.product_id\n-- \t\tAND US.purchase_date >= P.start_date\n-- \t\tAND US.purchase_date <= P.end_date\n-- \tGROUP BY US.product_id\n-- \t) AS Calc ON Ids.product_id = Calc.product_id\n\n-- select\n-- US.product_id,\n-- sum(coalesce(US.units, 0)* P.price) as sold_price,\n-- sum(coalesce(US.units, 0)) as total_units\n-- from Prices P cross join UnitsSold US\n-- where \n--     (US.product_id=P.product_id or US.product_id is null) and US.purchase_date >= P.start_date and US.purchase_date <= P.end_date group by P.product_id",
+      "submission_date": "2026-05-23T06:53:45Z"
+    },
+    "queries-quality-and-percentage": {
+      "slug": "queries-quality-and-percentage",
+      "lang": "mysql",
+      "code": "SELECT Q.query_name\n\t,round(sum(rating / position) / count(Q.query_name), 2) AS quality\n\t,IFNULL(round(sub.poor * 100.0 / count(Q.query_name), 2), 0) AS poor_query_percentage\nFROM Queries Q\nLEFT JOIN (\n\tSELECT query_name\n\t\t,count(*) AS poor\n\tFROM Queries\n\tWHERE rating < 3\n\tGROUP BY query_name\n\t) AS sub ON sub.query_name = Q.query_name\nGROUP BY Q.query_name",
+      "submission_date": "2026-05-23T09:08:02Z"
+    },
+    "last-person-to-fit-in-the-bus": {
+      "slug": "last-person-to-fit-in-the-bus",
+      "lang": "postgresql",
+      "code": "-- SELECT person_name\n-- FROM (\n-- \tSELECT person_name\n-- \t\t,SUM(weight) OVER (\n-- \t\t\tORDER BY turn\n-- \t\t\t) AS total_weight\n-- \tFROM QUEUE\n-- \t)\n-- WHERE total_weight <= 1000\n-- ORDER BY total_weight DESC limit 1\n\nSELECT person_name\nFROM QUEUE\nWHERE turn = (\n\t\tSELECT q1.turn\n\t\tFROM QUEUE q1\n\t\tLEFT JOIN QUEUE q2 ON q1.turn >= q2.turn\n\t\tGROUP BY q1.turn\n\t\tHAVING sum(q2.weight) <= 1000\n\t\tORDER BY sum(q2.weight) DESC limit 1\n\t\t)",
+      "submission_date": "2026-06-01T06:41:31Z"
+    },
+    "monthly-transactions-i": {
+      "slug": "monthly-transactions-i",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nSELECT\n    to_char(DATE_TRUNC('month', trans_date), 'YYYY-mm') AS month\n\t,country\n\t,count(*) AS trans_count\n    ,count(*) FILTER (where state='approved') as approved_count\n\t,sum(amount) AS trans_total_amount\n    ,COALESCE(sum(amount) FILTER (where state='approved'), 0) as approved_total_amount\nFROM Transactions\nGROUP BY\n    DATE_TRUNC('month', trans_date)\n\t,country",
+      "submission_date": "2026-05-25T03:03:00Z"
+    },
+    "immediate-food-delivery-ii": {
+      "slug": "immediate-food-delivery-ii",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\n-- SELECT round(\n--         count(*) filter(WHERE FO.first_order_date = D.customer_pref_delivery_date) * 100.0 / count(*)\n--     , 2) AS immediate_percentage\n-- FROM (\n-- \tSELECT customer_id\n-- \t\t,min(order_date) AS first_order_date\n-- \tFROM Delivery\n-- \tGROUP BY customer_id\n-- \t) AS FO\n-- LEFT JOIN Delivery D ON FO.customer_id = D.customer_id\n-- \tAND FO.first_order_date = D.order_date\n\nSELECT round(\n    count(*) FILTER(WHERE FO.order_date = FO.customer_pref_delivery_date) * 100.0 / count(*)\n, 2) AS immediate_percentage\nFROM (\n\tSELECT DISTINCT ON (customer_id)\n        customer_id\n\t\t,order_date\n\t\t,customer_pref_delivery_date\n\tFROM Delivery\n\tORDER BY customer_id\n\t\t,order_date\n\t) AS FO",
+      "submission_date": "2026-05-26T03:52:12Z"
+    },
+    "product-price-at-a-given-date": {
+      "slug": "product-price-at-a-given-date",
+      "lang": "postgresql",
+      "code": "-- SELECT F.product_id\n-- \t,coalesce(price, 10) AS price\n-- FROM (\n-- \tSELECT DISTINCT product_id\n-- \tFROM Products\n-- \t) F\n-- LEFT JOIN (\n-- \tSELECT P.product_id\n-- \t\t,new_price AS price\n-- \tFROM Products P\n-- \tJOIN (\n-- \t\tSELECT product_id\n-- \t\t\t,max(change_date) AS most_recent_date\n-- \t\tFROM Products\n-- \t\tWHERE change_date <= make_date(2019, 8, 16)\n-- \t\tGROUP BY product_id\n-- \t\t) AS R ON P.product_id = R.product_id\n-- \t\tAND P.change_date = R.most_recent_date\n-- \t) AS Res ON F.product_id = Res.product_id\n\n\n\nSELECT Ids.product_id\n\t,coalesce(Res.new_price, 10) AS price\nFROM\n\t(\n\t\tSELECT DISTINCT product_id\n\t\tFROM Products\n\t\t) AS Ids LEFT JOIN (\n\t\tSELECT DISTINCT ON (product_id)\n            product_id\n\t\t\t,new_price\n\t\tFROM Products\n\t\tWHERE change_date <= make_date(2019, 8, 16)\n\t\tORDER BY\n            product_id\n\t\t\t,change_date DESC\n\t\t) AS Res ON Ids.product_id = Res.product_id",
+      "submission_date": "2026-05-31T04:35:10Z"
+    },
+    "article-views-i": {
+      "slug": "article-views-i",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect distinct author_id as id from Views where author_id=viewer_id order by id;",
+      "submission_date": "2026-05-16T03:17:08Z"
+    },
+    "user-activity-for-the-past-30-days-i": {
+      "slug": "user-activity-for-the-past-30-days-i",
+      "lang": "postgresql",
+      "code": "SELECT\n    activity_date AS day\n\t,count(DISTINCT (user_id)) AS active_users\nFROM Activity\nWHERE activity_date BETWEEN make_date(2019,7,27) -29 AND make_date(2019,7,27)\nGROUP BY activity_date;",
+      "submission_date": "2026-05-27T03:59:09Z"
+    },
+    "game-play-analysis-iv": {
+      "slug": "game-play-analysis-iv",
+      "lang": "postgresql",
+      "code": "-- round(count(*)::Decimal / (select count(distinct(player_id)) from Activity), 2) as fraction\n\nSELECT  round(count(*)::Decimal / (select count(distinct(player_id)) from Activity), 2) as fraction\nFROM (\n\tSELECT DISTINCT ON (player_id)\n        player_id\n\t\t,event_date\n\tFROM Activity\n\tORDER BY\n        player_id\n\t\t,event_date\n\t) AS LD\n JOIN Activity A ON LD.player_id = A.player_id\n\tAND A.event_date - LD.event_date = 1",
+      "submission_date": "2026-05-26T04:52:47Z"
+    },
+    "project-employees-i": {
+      "slug": "project-employees-i",
+      "lang": "mysql",
+      "code": "\nSELECT\n    P.project_id\n\t,round(sum(E.experience_years) / count(E.employee_id), 2) AS average_years\nFROM Project P\nLEFT JOIN Employee E ON P.employee_id = E.employee_id\nGROUP BY P.project_id",
+      "submission_date": "2026-05-23T07:07:37Z"
+    },
+    "product-sales-analysis-iii": {
+      "slug": "product-sales-analysis-iii",
+      "lang": "postgresql",
+      "code": "-- SELECT\n--     FY.product_id\n-- \t,first_year\n-- \t,quantity\n-- \t,price\n-- FROM (\n-- \tSELECT DISTINCT ON (product_id)\n--         product_id\n-- \t\t,year AS first_year\n-- \tFROM Sales\n-- \tORDER BY product_id, year\n-- \t) AS FY\n-- LEFT JOIN Sales S ON\n--     FY.product_id = S.product_id\n-- \tAND FY.first_year = S.year\n\nSELECT\n    product_id\n\t,year as first_year\n\t,quantity\n\t,price\nFROM Sales where (product_id, year) in (\n\tSELECT DISTINCT ON (product_id)\n        product_id\n\t\t,year\n\tFROM Sales\n\tORDER BY product_id, year\n\t)",
+      "submission_date": "2026-05-28T04:15:23Z"
+    },
+    "product-sales-analysis-i": {
+      "slug": "product-sales-analysis-i",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect \"product_name\", \"year\", \"price\" from Sales left join Product on Sales.product_id=Product.product_id;",
+      "submission_date": "2026-05-17T04:10:39Z"
+    },
+    "customers-who-bought-all-products": {
+      "slug": "customers-who-bought-all-products",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nSELECT customer_id\nFROM Customer\nGROUP BY customer_id\nHAVING count(DISTINCT (product_key)) = (SELECT count(*) FROM Product)\n",
+      "submission_date": "2026-05-29T03:25:14Z"
+    },
+    "time-based-key-value-store": {
+      "slug": "time-based-key-value-store",
+      "lang": "python3",
+      "code": "from collections import defaultdict\n\nclass TimeMap:\n\n    def __init__(self):\n        self.hashmap = defaultdict(list)\n\n    def set(self, key: str, value: str, timestamp: int) -> None:\n        self.hashmap[key].append((timestamp, value))\n\n    def get(self, key: str, timestamp: int) -> str:\n        \n        time_value_list = self.hashmap[key]\n\n        if not time_value_list or timestamp < time_value_list[0][0]:\n            return \"\"\n        \n        left = 0\n        right = len(time_value_list)-1\n        \n        while(left <= right):\n            mid = (left + right)//2\n            \n            midk, val = time_value_list[mid]\n            \n            if midk == timestamp:\n                return val\n            \n            elif timestamp > midk:\n                left = mid + 1\n                \n            else:\n                right = mid - 1\n        \n        \n        return time_value_list[right][1]",
+      "submission_date": "2024-07-12T17:36:03Z"
+    },
+    "koko-eating-bananas": {
+      "slug": "koko-eating-bananas",
+      "lang": "python3",
+      "code": "class Solution:\n    def minEatingSpeed(self, piles: List[int], h: int) -> int:\n        upper_bound_time = max(piles)\n        \n        if h == len(piles):\n            return upper_bound_time\n\n        total_bananas = sum(piles)\n        \n        lower_bound_time = math.ceil(total_bananas / h)\n        \n        left, right = lower_bound_time, upper_bound_time+1\n        \n        minimum_eating_speed = upper_bound_time\n        \n        while(left <= right):\n            mid = left + (right - left) // 2\n            \n            time_taken = 0\n            for pile in piles:\n                time_taken += math.ceil(pile/mid)\n                \n            if time_taken <= h:\n                minimum_eating_speed = min(minimum_eating_speed, mid)\n                right = mid - 1\n                \n            else:\n                left = mid + 1\n        \n        return minimum_eating_speed",
+      "submission_date": "2024-06-25T11:55:01Z"
+    },
+    "car-fleet": {
+      "slug": "car-fleet",
+      "lang": "python3",
+      "code": "class Solution:\n    def carFleet(self, target: int, position: List[int], speed: List[int]) -> int:\n        sorted_by_pos_calculated_time = [(target-dist)/speed for dist, speed in sorted(zip(position, speed))]\n        \n        fleet_count = 0\n        max_time = 0\n\n        for time in sorted_by_pos_calculated_time[::-1]:\n            if time > max_time:\n                fleet_count += 1\n                max_time = time\n\n                \n        return fleet_count",
+      "submission_date": "2024-06-22T02:31:43Z"
+    },
+    "binary-search": {
+      "slug": "binary-search",
+      "lang": "python3",
+      "code": "class Solution:\n    def search(self, nums: List[int], target: int) -> int:\n        left, right = 0, len(nums)-1\n        \n        while(left <= right):\n            \n            mid = left + ((right - left) // 2)\n            \n            if nums[mid] == target:\n                return mid\n            \n            elif nums[mid] < target:\n                left = mid + 1\n            \n            else:\n                right = mid - 1\n                \n        return -1",
+      "submission_date": "2024-06-24T02:43:32Z"
+    },
+    "sliding-puzzle": {
+      "slug": "sliding-puzzle",
+      "lang": "python3",
+      "code": "class Solution:\n    def slidingPuzzle(self, board: List[List[int]]) -> int:\n        rows = 2\n        cols = 3\n\n\n        def is_valid(x, y):\n            return (0 <= x < rows) and (0 <= y < cols)\n\n        def get_state(board):\n            return tuple([tuple(x) for x in board])\n\n        def get_neighbours(x, y, state):\n            neighbours = []\n            zero_pos = []\n            state = [list(x) for x in state]\n\n            for dx, dy in ((0, 1), (1, 0), (0, -1), (-1, 0)):\n                nx, ny = x+dx, y+dy\n                if is_valid(nx, ny):\n                    state[x][y], state[nx][ny] = state[nx][ny], state[x][y]\n                    neighbours.append(get_state(state))\n                    zero_pos.append((nx, ny))\n                    state[x][y], state[nx][ny] = state[nx][ny], state[x][y]\n            return neighbours, zero_pos\n\n        def bfs(x, y):\n            moves = 0\n            start = get_state(board)\n            q = deque()\n            q.append((x, y, start))\n\n            visited = set()\n            visited.add(start)\n\n            while q:\n                n = len(q)\n                for _ in range(n):\n                    i, j, state = q.popleft()\n                    if state == desired:\n                        return moves\n\n                    \n                    neighbours, zero_positions = get_neighbours(i, j, state)\n                    for nstate, (nx, ny) in zip(neighbours, zero_positions):\n                        if nstate not in visited:\n                            q.append((nx, ny, nstate))\n                            visited.add(nstate)\n                moves+=1\n            return -1\n\n        desired = ((1,2,3),(4,5,0))\n        for i in range(2):\n            for j in range(3):\n                if board[i][j] == 0:\n                    return bfs(i, j)\n\n\n\n",
+      "submission_date": "2025-08-07T03:27:50Z"
+    },
+    "open-the-lock": {
+      "slug": "open-the-lock",
+      "lang": "python3",
+      "code": "from typing import *\nfrom collections import deque\nclass Solution:\n    def openLock(self, deadends: List[str], target: str) -> int:\n\n        def get_neighbours(state):\n            state = [int(x) for x in state]\n            neighbours = []\n\n            for i in range(4):\n                ori = state[i]\n                incre = (ori+1)%10\n                decre = (ori-1)%10\n\n                for change in [incre, decre]:\n                    state[i] = change\n                    neighbours.append(\"\".join([str(x) for x in state]))\n\n                state[i] = ori\n            return neighbours\n\n        q = deque()\n        q.append([\"0000\"])\n        seen = set([\"0000\"])\n        deadends = set(deadends)\n        moves = 0\n        found = False\n        while q:\n            level = q.popleft()\n            if target in level:\n                found = True\n                break\n            moves += 1\n            next_level = []\n            for node in level:\n                if node not in deadends:\n                    for child in get_neighbours(node):\n                        if child not in seen:\n                            seen.add(child)\n                            next_level.append(child)\n            if next_level:\n                q.append(next_level)\n                \n        if found:\n            return moves\n        else:\n            return -1\n\nsol =Solution().openLock(deadends = [\"0201\",\"0101\",\"0102\",\"1212\",\"2002\"], target = \"0202\")\nprint(sol)\n",
+      "submission_date": "2025-07-31T03:28:53Z"
+    },
+    "find-smallest-letter-greater-than-target": {
+      "slug": "find-smallest-letter-greater-than-target",
+      "lang": "python3",
+      "code": "class Solution:\n    def nextGreatestLetter(self, letters: List[str], target: str) -> str:\n        for ch in letters:\n            if ch > target:\n                return ch\n        \n        return letters[0]\n\n    def nextGreatestLetter(self, letters: List[str], target: str) -> str:\n        left = 0\n        right = len(letters)-1\n        just_greater = letters[0]\n\n        while left <= right:\n            mid = (left + right)//2\n            mid_num = letters[mid]\n            if mid_num > target:\n                just_greater = mid_num\n                right = mid -1\n\n            else:\n                left = mid +1\n\n        return just_greater\n\n",
+      "submission_date": "2025-05-20T02:59:27Z"
+    },
+    "daily-temperatures": {
+      "slug": "daily-temperatures",
+      "lang": "python3",
+      "code": "class Solution:\n    def dailyTemperatures(self, temperatures: List[int]) -> List[int]:\n        stack = deque()\n        \n        answer = [0] * len(temperatures)\n        \n        for idx, temp in enumerate(temperatures):\n            while(stack and temp > stack[-1][1]):\n                st_idx = stack[-1][0]\n                \n                answer[st_idx] = idx-st_idx\n                \n                stack.pop()\n                \n            stack.append((idx, temp))\n            \n        return answer",
+      "submission_date": "2024-06-21T16:36:22Z"
+    },
+    "average-of-levels-in-binary-tree": {
+      "slug": "average-of-levels-in-binary-tree",
+      "lang": "python3",
+      "code": "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nfrom collections import deque\nclass Solution:\n    def averageOfLevels(self, root: Optional[TreeNode]) -> List[float]:\n        q = deque()\n        if root:\n            q.append([root])\n        ans = []\n        while len(q)>0:\n            level = q.popleft()\n            total = sum([x.val for x in level])\n            avg = total/len(level)\n            ans.append(avg)\n            next_level = []\n            for node in level:\n                for child in [node.left, node.right]:\n                    if child:\n                        next_level.append(child)\n            if next_level:\n                q.append(next_level)\n        return ans\n",
+      "submission_date": "2025-07-23T02:06:32Z"
+    },
+    "exchange-seats": {
+      "slug": "exchange-seats",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect o.id, COALESCE(e.student, (select student from Seat where id=o.id)) as student from (select id from Seat s1 where s1.id%2=1) o LEFT JOIN (select * from Seat s2 where id%2=0) e ON o.id+1=e.id \n\nunion\n\nselect e.id, o.student from (select id from Seat s1 where s1.id%2=0) e LEFT JOIN (select * from Seat s2 where id%2=1) o ON e.id-1=o.id \n\n",
+      "submission_date": "2026-06-06T05:40:06Z"
+    },
+    "not-boring-movies": {
+      "slug": "not-boring-movies",
+      "lang": "mysql",
+      "code": "# Write your MySQL query statement below\nselect * from Cinema where id%2=1 and description!='boring' order by rating desc;",
+      "submission_date": "2026-05-22T02:55:05Z"
+    },
+    "biggest-single-number": {
+      "slug": "biggest-single-number",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect max(num) as num from (\nselect num from MyNumbers group by num having count(*)=1\n)\n",
+      "submission_date": "2026-05-29T03:06:30Z"
+    },
+    "triangle-judgement": {
+      "slug": "triangle-judgement",
+      "lang": "postgresql",
+      "code": "SELECT x,y,z\n\t,CASE \n\t\tWHEN x < (x + y + z) / 2.0\n\t\t\tAND y < (x + y + z) / 2.0\n\t\t\tAND z < (x + y + z) / 2.0\n\t\t\tTHEN 'Yes'\n\t\tELSE 'No'\n\t\tEND AS triangle\nFROM Triangle",
+      "submission_date": "2026-05-30T06:16:33Z"
+    },
+    "friend-requests-ii-who-has-the-most-friends": {
+      "slug": "friend-requests-ii-who-has-the-most-friends",
+      "lang": "postgresql",
+      "code": "SELECT\n    id,\n    SUM(friends) AS num\nFROM\n(\n    (\n        SELECT\n            requester_id AS id,\n            COUNT(*) AS friends\n        FROM RequestAccepted ra\n        GROUP BY requester_id\n    )\n\n    UNION ALL\n\n    (\n        SELECT\n            accepter_id AS id,\n            COUNT(*) AS friends\n        FROM RequestAccepted ra\n        GROUP BY accepter_id\n    )\n)\nGROUP BY id\nORDER BY num DESC\nFETCH FIRST 1 ROW WITH TIES;",
+      "submission_date": "2026-06-09T04:28:47Z"
+    },
+    "classes-with-at-least-5-students": {
+      "slug": "classes-with-at-least-5-students",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\n-- SELECT class\n-- FROM (\n-- \tSELECT class\n-- \t\t,count(*) AS students\n-- \tFROM Courses\n-- \tGROUP BY class\n-- \t) AS S\n-- WHERE students >= 5;\n\nselect\n    class\nfrom\n    Courses\ngroup by\n    class\nhaving\n    count(student) >= 5;",
+      "submission_date": "2026-05-28T04:30:06Z"
+    },
+    "big-countries": {
+      "slug": "big-countries",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect \"name\", \"population\", \"area\" from World where \"area\" >= 3000000 or \"population\" >= 25000000;",
+      "submission_date": "2026-05-16T03:10:10Z"
+    },
+    "investments-in-2016": {
+      "slug": "investments-in-2016",
+      "lang": "postgresql",
+      "code": "WITH\n  InsuranceWithCounts AS (\n    SELECT\n      tiv_2016,\n      COUNT(*) OVER(PARTITION by tiv_2015) AS tiv_2015_count,\n      COUNT(*) OVER(PARTITION by lat, lon) AS city_count\n    FROM Insurance\n  )\nSELECT ROUND(SUM(tiv_2016)::DECIMAL, 2) AS tiv_2016\nFROM InsuranceWithCounts\nWHERE tiv_2015_count > 1\n  AND city_count = 1;",
+      "submission_date": "2026-06-10T06:05:15Z"
+    },
+    "find-customer-referee": {
+      "slug": "find-customer-referee",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect name from Customer where referee_id!=2 or referee_id is null;",
+      "submission_date": "2026-05-16T03:03:32Z"
+    },
+    "employee-bonus": {
+      "slug": "employee-bonus",
+      "lang": "mysql",
+      "code": "# Write your MySQL query statement below\nselect name, bonus from Employee E left join Bonus B on E.empId=B.empId\nwhere B.bonus < 1000 or B.empId is null;",
+      "submission_date": "2026-05-20T02:47:55Z"
+    },
+    "managers-with-at-least-5-direct-reports": {
+      "slug": "managers-with-at-least-5-direct-reports",
+      "lang": "mysql",
+      "code": "# Write your MySQL query statement below\n-- select C.name from (\n-- select name, count(managerId)as contacts from Employee group by name, managerId\n-- ) as C where C.contacts >= 5;\n\nselect name from Employee as E left join (\n    select managerId, count(managerId) as contacts from Employee group by managerId\n) as C on E.id = C.managerId where C.contacts >= 5;\n",
+      "submission_date": "2026-05-21T04:42:09Z"
+    },
+    "minimum-number-of-arrows-to-burst-balloons": {
+      "slug": "minimum-number-of-arrows-to-burst-balloons",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def findMinArrowShots(self, points: List[List[int]]) -> int:\n        points.sort(key=lambda x: x[0])\n\n        idx = 0\n        count = 0\n        while idx < len(points):\n            a, b = points[idx]\n            nxt = idx + 1\n\n            while nxt < len(points) and points[nxt][0] <= b:\n                b = min(b, points[nxt][1])\n                nxt += 1\n\n            count += 1\n            idx = nxt\n\n        return count\n\n\nsol = Solution().findMinArrowShots([[1, 2], [3, 4], [5, 6], [7, 8]])\nprint(sol)\n",
+      "submission_date": "2025-12-23T05:55:30Z"
+    },
+    "is-subsequence": {
+      "slug": "is-subsequence",
+      "lang": "python3",
+      "code": "class Solution:\n    def isSubsequence(self, s: str, t: str) -> bool:\n        sp = 0\n        tp = 0\n\n        while sp < len(s):\n            ch = s[sp]\n            found = False\n\n            while tp < len(t):\n                if t[tp] == ch:\n                    found = True\n                    break\n                tp += 1\n\n            if not found:\n                return False\n\n            sp += 1\n            tp += 1\n\n        return True\n\n\nsol = Solution().isSubsequence(\"abc\", \"sdfapocmb\")\nprint(sol)\n",
+      "submission_date": "2025-12-06T07:22:29Z"
+    },
+    "ransom-note": {
+      "slug": "ransom-note",
+      "lang": "python3",
+      "code": "from collections import Counter\n\n\nclass Solution:\n    def canConstruct(self, ransomNote: str, magazine: str) -> bool:\n        note_freq = Counter(ransomNote)\n        mag_freq = Counter(magazine)\n\n        for key, value in note_freq.items():\n            if value > mag_freq[key]:\n                return False\n\n        return True\n",
+      "submission_date": "2025-12-21T06:49:50Z"
+    },
+    "insert-delete-getrandom-o1": {
+      "slug": "insert-delete-getrandom-o1",
+      "lang": "java",
+      "code": "import java.util.ArrayList;\nimport java.util.HashMap;\nimport java.util.Random;\n\nclass RandomizedSet {\n  private HashMap<Integer, Integer> map = null;\n  private ArrayList<Integer> list = null;\n  private Random random = null;\n\n  public RandomizedSet() {\n    map = new HashMap<>();\n    list = new ArrayList<>();\n    random = new Random();\n  }\n\n  public boolean insert(int val) {\n    if (map.containsKey(val)) {\n      return false;\n    }\n    map.put(val, list.size());\n    list.add(val);\n    return true;\n  }\n\n  public boolean remove(int val) {\n    if (map.containsKey(val)) {\n      int listIdx = map.get(val);\n      map.remove(val);\n\n      int n = list.size();\n      int lastElement = list.get(n - 1);\n\n      if (listIdx != n-1) {\n        map.put(lastElement, listIdx);\n        list.set(listIdx, lastElement);\n      }\n      list.remove(n-1);\n\n      return true;\n    }\n    return false;\n  }\n\n  public int getRandom() {\n    int randomIdx = random.nextInt(list.size());\n    return list.get(randomIdx);\n  }\n}\n",
+      "submission_date": "2026-08-22T18:22:44Z"
+    },
+    "top-k-frequent-elements": {
+      "slug": "top-k-frequent-elements",
+      "lang": "python3",
+      "code": "class Solution:\n    def topKFrequent(self, nums: List[int], k: int) -> List[int]:\n        memo = {}\n        \n        for i in nums:\n            memo[i] = memo.get(i, 0) + 1\n        \n        buckets = [ [] for _ in range(len(nums) + 1) ]\n        \n        for key, val in memo.items():\n            buckets[val].append(key)\n        \n        top_k = []\n        size = len(buckets)\n        \n        for i in range(size-1, -1, -1):\n            for j in buckets[i]:\n                top_k.append(j)\n                if len(top_k) == k:\n                    return top_k\n                \n        return top_k",
+      "submission_date": "2024-06-14T20:12:28Z"
+    },
+    "coin-change": {
+      "slug": "coin-change",
+      "lang": "python3",
+      "code": "class Solution:\n    def coinChange(self, coins: List[int], amount: int) -> int:\n        if amount == 0:\n            return 0\n\n        memo = {}\n            \n        def dfs(num, collect):\n            \n            if collect == amount:\n                return num\n            \n            if collect > amount:\n                return float(\"inf\")\n\n            try:\n                return memo[collect]\n            except KeyError:\n                pass\n\n            min_coins = float(\"inf\")\n            index = 0\n            while index < len(coins):\n\n                ans = dfs(num+1, collect+coins[index])\n\n                \n\n                min_coins = min(min_coins, ans)\n                \n                index += 1\n\n            memo[collect] = min_coins\n            return min_coins\n        res = dfs(0, 0)\n        return -1 if res == float(\"inf\") else res\n                \nclass Solution:\n    def coinChange(self, coins: List[int], amount: int) -> int:\n        \n        memo = {}\n        \n        def dfs(remaining):\n            if remaining == 0:\n                return 0\n            if remaining < 0:\n                return float('inf')\n            \n            if remaining in memo:\n                return memo[remaining]\n            \n            min_coins = float('inf')\n            for coin in coins:\n                res = dfs(remaining - coin)\n                if res != float('inf'):\n                    min_coins = min(min_coins, res + 1)\n            \n            memo[remaining] = min_coins\n            return min_coins\n        \n        res = dfs(amount)\n        return -1 if res == float('inf') else res\n",
+      "submission_date": "2025-07-03T03:14:20Z"
+    },
+    "serialize-and-deserialize-binary-tree": {
+      "slug": "serialize-and-deserialize-binary-tree",
+      "lang": "python3",
+      "code": "# Definition for a binary tree node.\n# class TreeNode(object):\n#     def __init__(self, x):\n#         self.val = x\n#         self.left = None\n#         self.right = None\nimport json\nclass Codec:\n\n    def serialize(self, root):\n        \"\"\"Encodes a tree to a single string.\n        \n        :type root: TreeNode\n        :rtype: str\n        \"\"\"\n        serialized = []\n        def dfs(root):\n            if root is None:\n                serialized.append(None)\n                return\n\n            serialized.append(root.val)\n            dfs(root.left)\n            dfs(root.right)\n\n        dfs(root)\n        print(json.dumps(serialized))\n        return json.dumps(serialized)\n        \n    def deserialize(self, data):\n        \"\"\"Decodes your encoded data to tree.\n        \n        :type data: str\n        :rtype: TreeNode\n        \"\"\"\n        data = json.loads(data)\n        itr = 0\n        def dfs():\n            nonlocal itr\n            if itr < len(data):\n                if data[itr] is None:\n                    itr += 1\n                    return None\n                root = TreeNode(data[itr])\n                itr += 1\n                root.left = dfs()\n                root.right = dfs()\n                return root\n\n        return dfs()\n\n\n\n\n            \n            \n\n# Your Codec object will be instantiated and called as such:\n# ser = Codec()\n# deser = Codec()\n# ans = deser.deserialize(ser.serialize(root))",
+      "submission_date": "2025-06-17T03:48:22Z"
+    },
+    "word-pattern": {
+      "slug": "word-pattern",
+      "lang": "python3",
+      "code": "class Solution:\n    def wordPattern(self, pattern: str, s: str) -> bool:\n        s = s.split()\n\n        if len(pattern) != len(s):\n            return False\n\n        mapped_p = dict()\n        mapped_s = dict()\n\n        for p, word in zip(pattern, s):\n            if p in mapped_p and mapped_p[p] != word:\n                return False\n\n            if word in mapped_s and mapped_s[word] != p:\n                return False\n\n            mapped_p[p] = word\n            mapped_s[word] = p\n\n        return True\n\n\nsol = Solution().wordPattern(pattern=\"abba\", s=\"dog cat cat dog\")\nsol = Solution().wordPattern(pattern=\"abba\", s=\"dog cat cat fish\")\nprint(sol)\n",
+      "submission_date": "2025-12-21T07:31:23Z"
+    },
+    "game-of-life": {
+      "slug": "game-of-life",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def gameOfLife(self, board: List[List[int]]) -> None:\n        def get_live_neighbors(x0, y0):\n            live = 0\n            for x, y in {\n                (1, 0),\n                (0, 1),\n                (-1, 0),\n                (0, -1),\n                (1, 1),\n                (-1, 1),\n                (1, -1),\n                (-1, -1),\n            }:\n                dx = x0 + x\n                dy = y0 + y\n                try:\n                    num = board[dx][dy]\n                    if dx >= 0 and dy >= 0 and (num in (1, None)):\n                        live += 1\n                except IndexError:\n                    pass\n\n            return live\n\n        rows = len(board)\n        cols = len(board[0])\n\n        for i in range(rows):\n            for j in range(cols):\n                live_neighbors = get_live_neighbors(i, j)\n                if board[i][j] == 1:\n                    if live_neighbors < 2:\n                        board[i][j] = None\n                    elif live_neighbors > 3:\n                        board[i][j] = None\n                elif board[i][j] == 0:\n                    if live_neighbors == 3:\n                        board[i][j] = -1\n\n        for i in range(rows):\n            for j in range(cols):\n                num = board[i][j]\n                if num is None:\n                    board[i][j] = 0\n                elif num == -1:\n                    board[i][j] = 1\n\n\nboard = [[0, 1, 0], [0, 0, 1], [1, 1, 1], [0, 0, 0]]\n\nSolution().gameOfLife(board)\noutput = [[0, 0, 0], [1, 0, 1], [0, 1, 1], [0, 1, 0]]\nprint(board)\n",
+      "submission_date": "2025-12-20T07:52:42Z"
+    },
+    "h-index": {
+      "slug": "h-index",
+      "lang": "java",
+      "code": "class Solution {\n  public int hIndex(int[] citations) {\n    int n = citations.length;\n    int buckets[] = new int[n+1];\n\n    for (int i : citations) {\n      buckets[Math.min(i, n)]++;\n    }\n\n    int h = n;\n    int papers = 0;\n    while (h > 0) {\n      papers += buckets[h];\n      if (papers >= h) {\n        break;\n      }\n      h--;\n    }\n\n    return h;\n  }\n\n  public static void main(String[] args) {\n    int citations[] = { 3, 0, 6, 1, 5 };\n    int citations2[] = { 1, 3, 1 };\n    System.out.println(new Solution().hIndex(citations));\n    System.out.println(new Solution().hIndex(citations2));\n  }\n}",
+      "submission_date": "2026-08-22T17:23:55Z"
+    },
+    "valid-anagram": {
+      "slug": "valid-anagram",
+      "lang": "python3",
+      "code": "from collections import Counter\n\n\nclass Solution:\n    def isAnagram(self, s: str, t: str) -> bool:\n        if len(s) != len(t):\n            return False\n\n        return Counter(s) == Counter(t)",
+      "submission_date": "2025-12-21T07:50:15Z"
+    },
+    "product-of-array-except-self": {
+      "slug": "product-of-array-except-self",
+      "lang": "java",
+      "code": "class Solution {\n  public int[] productExceptSelf(int[] nums) {\n    int n = nums.length;\n\n    int leftToRight[] = new int[n];\n    int runningProduct = 1;\n    for (int i = 0; i < n; i++) {\n      leftToRight[i] = runningProduct;\n      runningProduct *= nums[i];\n    }\n\n    int productExceptSelf[] = new int[n];\n    runningProduct = 1;\n    for (int i = n-1; i >= 0; i--) {\n      productExceptSelf[i] = leftToRight[i] * runningProduct;\n      runningProduct *= nums[i];\n    }\n\n    return productExceptSelf;\n  }\n\n  public static void main(String[] args) {\n    int nums[] = { 1, 2, 3, 4 };\n    int nums2[] = { -1, 1, 0, -3, 3 };\n    int ans[] = new Solution().productExceptSelf(nums);\n    int ans2[] = new Solution().productExceptSelf(nums2);\n    for (int i : ans) {\n      System.out.print(i + \" \");\n    }\n    System.out.println();\n    for (int i : ans2) {\n      System.out.print(i + \" \");\n    }\n  }\n}",
+      "submission_date": "2026-08-23T17:06:10Z"
+    },
+    "summary-ranges": {
+      "slug": "summary-ranges",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def summaryRanges(self, nums: List[int]) -> List[str]:\n        output = list()\n\n        idx = 0\n        while idx < len(nums):\n            n = nums[idx]\n            start = n\n            while n + 1 in nums:\n                n += 1\n                idx += 1\n            if start == n:\n                output.append(f\"{start}\")\n            else:\n                output.append(f\"{start}->{n}\")\n            idx += 1\n\n        return output\n\n\nsol = Solution().summaryRanges(nums=[0, 2, 3, 4, 6, 8, 9])\nprint(sol)\n",
+      "submission_date": "2025-12-22T09:02:15Z"
+    },
+    "invert-binary-tree": {
+      "slug": "invert-binary-tree",
+      "lang": "python3",
+      "code": "class Solution:\n    def invertTree(self, root: Optional[TreeNode]) -> Optional[TreeNode]:\n        if root is None:\n            return\n\n        self.invertTree(root.left)\n        self.invertTree(root.right)\n\n        root.left, root.right = root.right, root.left\n\n        return root",
+      "submission_date": "2026-05-10T05:10:13Z"
+    },
+    "count-complete-tree-nodes": {
+      "slug": "count-complete-tree-nodes",
+      "lang": "python3",
+      "code": "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def countNodes(self, root: Optional[TreeNode]) -> int:\n        if root is None:\n            return 0\n        \n        left_nodes = self.countNodes(root.left)\n        right_nodes = self.countNodes(root.right)\n\n        return left_nodes + right_nodes + 1\n        ",
+      "submission_date": "2025-05-27T02:35:03Z"
+    },
+    "contains-duplicate-ii": {
+      "slug": "contains-duplicate-ii",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def containsNearbyDuplicate(self, nums: List[int], k: int) -> bool:\n        memo = dict()\n\n        for idx, num in enumerate(nums):\n            if num in memo and idx - memo.get(num) <= k:\n                return True\n\n            memo[num] = idx\n\n        return False\n\n\nsol = Solution().containsNearbyDuplicate(nums=[1, 2, 3, 1, 2, 3], k=2)\nprint(sol)\n",
+      "submission_date": "2025-12-22T08:20:42Z"
+    },
+    "contains-duplicate": {
+      "slug": "contains-duplicate",
+      "lang": "python3",
+      "code": "class Solution:\n    def containsDuplicate(self, nums: List[int]) -> bool:\n        memo = {}\n        for i in nums:\n            if memo.get(i):\n                return True\n            else:\n                memo[i] = True\n        return False",
+      "submission_date": "2024-06-11T21:37:59Z"
+    },
+    "minimum-size-subarray-sum": {
+      "slug": "minimum-size-subarray-sum",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def minSubArrayLen(self, target: int, nums: List[int]) -> int:\n        min_size = len(nums) + 1\n\n        left = 0\n        right = 0\n        total = 0\n        while right < len(nums):\n            total += nums[right]\n\n            while left <= right and total >= target:\n                min_size = min(min_size, 1 if left == right else right - left + 1)\n                total -= nums[left]\n                left += 1\n            right += 1\n\n        return min_size if min_size != len(nums) + 1 else 0\n\n\nsol = Solution().minSubArrayLen(target=11, nums=[1, 2, 3, 4, 5])\nprint(sol)\n",
+      "submission_date": "2025-12-11T11:30:09Z"
+    },
+    "course-schedule": {
+      "slug": "course-schedule",
+      "lang": "python3",
+      "code": "class Solution:\n    def canFinish(self, numCourses: int, prerequisites: List[List[int]]) -> bool:\n        adjl = defaultdict(list)\n\n        for k, v in prerequisites:\n            adjl[k].append(v)\n\n        def dfs(node):\n            if node in visited:\n                return False\n\n            if node in memo or not adjl[node]:\n                return True\n                \n            visited.add(node)\n            for child in adjl[node]:\n                if not dfs(child):\n                    return False\n            visited.remove(node)\n\n            memo.add(node)\n            return True\n\n        memo = set()\n        visited = set()\n        for i in range(numCourses):\n            if i not in memo:\n                if not dfs(i):\n                    return False\n        return True\n\n",
+      "submission_date": "2025-08-03T04:15:30Z"
+    },
+    "reverse-linked-list": {
+      "slug": "reverse-linked-list",
+      "lang": "python3",
+      "code": "class Solution:\n    def reverseList(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        def reverseLL1():\n            \"\"\"Reversing the linked list by pushing the next node\n            to the start of the linked list, and maintaining the new head pointer.\n            \"\"\"\n            start = head\n            new_head = head\n            next_node = start.next\n\n            while next_node is not None:\n                start.next = start.next.next\n                next_node.next = new_head\n                new_head = next_node\n                next_node = start.next\n\n            return new_head\n\n        def reverseLL2():\n            \"\"\"Reversing the linked list by traditional flipping the pointer\n            in the reverse direction.\n            \"\"\"\n            prev = None\n            current = head\n            while current is not None:\n                next_node = current.next\n                current.next = prev\n                prev = current\n                current = next_node\n\n            return prev\n\n        return reverseLL2()\n",
+      "submission_date": "2026-05-01T09:56:16Z"
+    },
+    "isomorphic-strings": {
+      "slug": "isomorphic-strings",
+      "lang": "python3",
+      "code": "class Solution:\n    def isIsomorphic(self, s: str, t: str) -> bool:\n        if len(s) != len(t):\n            return False\n        memo_st = dict()\n        memo_ts = dict()\n\n        for sch, tch in zip(s, t):\n            if sch in memo_st and memo_st[sch] != tch:\n                return False\n            if tch in memo_ts and memo_ts[tch] != sch:\n                return False\n\n            memo_st[sch] = tch\n            memo_ts[tch] = sch\n\n        return True\n\n\nsol = Solution().isIsomorphic(s=\"badc\", t=\"baby\")\nprint(sol)\n",
+      "submission_date": "2025-12-21T07:07:03Z"
+    },
+    "happy-number": {
+      "slug": "happy-number",
+      "lang": "python3",
+      "code": "class Solution:\n    def isHappy(self, n: int) -> bool:\n        def sum_of_square(num):\n            sosq = 0\n            while num > 0:\n                sosq += (num % 10) ** 2\n                num = num // 10\n            return sosq\n\n        flag = True\n        seen = set()\n        while n != 1:\n            n = sum_of_square(n)\n            if n in seen:\n                flag = False\n                break\n            seen.add(n)\n\n        return flag\n\n\nsol = Solution().isHappy(2)\nprint(sol)\n",
+      "submission_date": "2025-12-22T08:10:47Z"
+    },
+    "binary-tree-right-side-view": {
+      "slug": "binary-tree-right-side-view",
+      "lang": "python3",
+      "code": "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nfrom collections import deque\nclass Solution:\n    def rightSideView(self, root: Optional[TreeNode]) -> List[int]:\n        ans = []\n        q = deque()\n        if root:\n            q.append([root])\n        while len(q) > 0:\n            level = q.popleft()\n            ans.append(level[-1].val)\n            next_level = []\n            for node in level:\n                for child in [node.left, node.right]:\n                    if child:\n                        next_level.append(child)\n            if next_level:\n                q.append(next_level)\n        return ans",
+      "submission_date": "2025-07-22T03:40:59Z"
+    },
+    "rising-temperature": {
+      "slug": "rising-temperature",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\n-- select today.id from Weather today CROSS JOIN Weather yesterday\n-- where today.recordDate - yesterday.recordDate = 1 and\n-- today.temperature > yesterday.temperature;\n\n\n\n\n\n-- select w1.id from Weather w1\n-- where w1.temperature > (\n--     select w2.temperature from Weather w2\n--     where w2.recordDate = w1.recordDate - INTERVAL '1 DAY'\n-- )\n\nselect w1.id from Weather w1\nwhere w1.temperature > (\n    select w2.temperature from Weather w2\n    where w1.recordDate - w2.recordDate = 1\n)\n",
+      "submission_date": "2026-05-19T03:07:31Z"
+    },
+    "delete-duplicate-emails": {
+      "slug": "delete-duplicate-emails",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\n\nDELETE FROM Person\nWHERE id NOT IN (\n    SELECT DISTINCT ON (email)\n        id\n    FROM Person\n    ORDER BY email, id\n);",
+      "submission_date": "2026-06-12T04:34:46Z"
+    },
+    "number-of-1-bits": {
+      "slug": "number-of-1-bits",
+      "lang": "python3",
+      "code": "class Solution:\n    def hammingWeight(self, n: int) -> int:\n        set_bits = 0\n        while n > 0:\n            lsb = (n & 1)\n            if lsb == 1:\n                set_bits += 1\n            n = n >> 1\n\n        return set_bits",
+      "submission_date": "2025-04-07T01:43:30Z"
+    },
+    "reverse-bits": {
+      "slug": "reverse-bits",
+      "lang": "python3",
+      "code": "class Solution:\n    def to_rev_binary(self, n):\n        binary_str = \"\"\n        while n > 0:\n            if n % 2 == 0:\n                binary_str += \"0\"\n            else:\n                binary_str += \"1\"\n            n = int(n/2)\n\n        if len(binary_str) != 32:\n            binary_str = binary_str + (\"0\"*(32-len(binary_str))) \n\n        return binary_str\n\n    def reverseBits(self, n: int) -> int:\n        rev_binary_str = self.to_rev_binary(n)\n        print(rev_binary_str)\n        num = 0\n        power = 1\n        itr = len(rev_binary_str)-1\n\n        while itr >= 0:\n            bit = int(rev_binary_str[itr])\n            if bit == 1:\n                num += bit * power\n            power *= 2\n            itr -= 1\n\n        return num",
+      "submission_date": "2025-04-06T03:06:22Z"
+    },
+    "rotate-array": {
+      "slug": "rotate-array",
+      "lang": "java",
+      "code": "class Solution {\n\n  public void reverse(int[] nums, int start, int end) {\n    int temp = 0;\n\n    while (start < end) {\n      temp = nums[start];\n      nums[start] = nums[end];\n      nums[end] = temp;\n      start++;\n      end--;\n    }\n  }\n\n  public void rotate(int[] nums, int k) {\n    k = k % nums.length;\n    if (k != 0) {\n      this.reverse(nums, 0, nums.length - 1);\n      this.reverse(nums, 0, k - 1);\n      this.reverse(nums, k, nums.length - 1);\n    }\n  }\n\n  public static void main(String[] args) {\n    int nums[] = { 1, 2, 3, 4, 5, 6, 7 };\n    int k = 0;\n    // 5, 6, 7, 1, 2, 3, 4\n    new Solution().rotate(nums, k);\n    for (int i : nums) {\n      System.out.print(i + \" \");\n    }\n  }\n}",
+      "submission_date": "2026-08-20T08:07:14Z"
+    },
+    "department-top-three-salaries": {
+      "slug": "department-top-three-salaries",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\n\nSELECT\n    dept_name AS \"Department\",\n    emp_name AS \"Employee\",\n    salary AS \"Salary\"\nFROM (\n    SELECT\n        dept_name,\n        emp_name,\n        salary,\n        DENSE_RANK() OVER (\n            PARTITION BY dept_name\n            ORDER BY salary DESC\n        ) AS salary_rank\n    FROM (\n        SELECT\n            d.name AS dept_name,\n            e.name AS emp_name,\n            salary\n        FROM Employee e\n        LEFT JOIN Department d\n            ON e.departmentId = d.id\n    )\n)\nWHERE salary_rank <= 3;",
+      "submission_date": "2026-06-11T04:10:30Z"
+    },
+    "department-highest-salary": {
+      "slug": "department-highest-salary",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nSELECT \n    d.name AS Department\n\t,e.name AS Employee\n\t,max_salary AS Salary\nFROM Department d JOIN (\n     Employee e JOIN (\n        SELECT\n            departmentId\n            ,max(salary) AS max_salary\n        FROM Employee\n        GROUP BY departmentId\n    ) AS mx ON e.departmentId = mx.departmentId AND e.salary = mx.max_salary\n) ON d.id = e.departmentId",
+      "submission_date": "2026-06-05T03:59:46Z"
+    },
+    "consecutive-numbers": {
+      "slug": "consecutive-numbers",
+      "lang": "postgresql",
+      "code": "SELECT distinct l1.num as ConsecutiveNums\nFROM Logs l1\n\t,Logs l2\n\t,Logs l3\nWHERE l2.id = l1.id + 1\n\tAND l3.id = l2.id + 1\n\tAND l1.num = l2.num\n\tAND l2.num = l3.num",
+      "submission_date": "2026-05-31T02:59:03Z"
+    },
+    "second-highest-salary": {
+      "slug": "second-highest-salary",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nSELECT (\n    SELECT DISTINCT (salary) AS salary\n    FROM Employee\n    ORDER BY salary DESC\n    LIMIT 1 OFFSET 1\n) AS \"SecondHighestSalary\";",
+      "submission_date": "2026-06-13T02:05:16Z"
+    },
+    "majority-element": {
+      "slug": "majority-element",
+      "lang": "java",
+      "code": "class Solution {\n  public int majorityElement(int[] nums) {\n    int majorityElement = nums[0];\n    int freq = 1;\n    for (int i = 1; i < nums.length; i++) {\n      if (majorityElement == nums[i]) {\n        freq++;\n      } else if (freq == 0) {\n        majorityElement = nums[i];\n        freq = 1;\n      } else {\n        freq--;\n      }\n    }\n    return majorityElement;\n  }\n\n  public static void main(String[] args) {\n    int nums[] = {2,2,1,1,1,2,2};\n    System.out.println(new Solution().majorityElement(nums));\n  }\n}",
+      "submission_date": "2026-08-20T07:47:36Z"
+    },
+    "two-sum-ii-input-array-is-sorted": {
+      "slug": "two-sum-ii-input-array-is-sorted",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def twoSum(self, numbers: List[int], target: int) -> List[int]:\n        left = 0\n        right = len(numbers) - 1\n\n        while left < right:\n            twosum = numbers[left] + numbers[right]\n\n            if twosum == target:\n                return [left + 1, right + 1]\n\n            elif twosum < target:\n                left += 1\n\n            else:\n                right -= 1\n\n\nsol = Solution().twoSum(numbers=[2, 7, 11, 15], target=9)\nprint(sol)\n",
+      "submission_date": "2025-12-06T07:28:28Z"
+    },
+    "find-peak-element": {
+      "slug": "find-peak-element",
+      "lang": "python3",
+      "code": "class Solution:\n    def findPeakElement(self, nums: List[int]) -> int:\n        left = 0\n        right = len(nums)-1\n\n        while left <= right:\n\n            mid = (left + right)//2\n\n            if mid >0:\n                lval = nums[mid-1]\n            else:\n                lval = float(\"-inf\")\n\n            if mid < len(nums)-1:\n                rval = nums[mid+1]\n            else:\n                rval = float(\"-inf\")\n\n            if nums[mid] > lval and nums[mid] > rval:\n                return mid\n\n            elif rval > nums[mid]:\n                left = mid+1\n\n            else:\n                right = mid-1\n",
+      "submission_date": "2025-05-19T01:56:42Z"
+    },
+    "min-stack": {
+      "slug": "min-stack",
+      "lang": "python3",
+      "code": "class MinStack:\n    def __init__(self):\n        self.stack = []\n        self.min_val = float(\"inf\")\n\n    def push(self, val: int) -> None:\n        if val < self.min_val:\n            self.min_val = val\n\n        self.stack.append(self.min_val)\n        self.stack.append(val)\n\n    def pop(self) -> None:\n        self.stack.pop()\n        self.stack.pop()\n        self.min_val = self.stack[-2] if self.stack else float(\"inf\")\n\n    def top(self) -> int:\n        return self.stack[-1]\n\n    def getMin(self) -> int:\n        return self.min_val\n",
+      "submission_date": "2025-12-25T09:56:59Z"
+    },
+    "find-minimum-in-rotated-sorted-array": {
+      "slug": "find-minimum-in-rotated-sorted-array",
+      "lang": "python3",
+      "code": "class Solution:\n    def findMin(self, nums: List[int]) -> int:\n        left = 0\n        right = len(nums)-1\n\n        while left <= right:\n\n            mid = (left + right)//2\n\n            mid_num = nums[mid]\n\n            prev_num = nums[mid-1] if mid > 0 else float(\"inf\")\n            next_num = nums[mid+1] if mid != len(nums)-1 else float(\"inf\")\n\n            if mid_num < prev_num or mid_num > next_num:\n                return min([prev_num, mid_num, next_num])\n            \n            left_num = nums[left]\n            right_num = nums[right]\n\n            if left_num > mid_num:\n                right = mid-1\n            elif mid_num > right_num:\n                left = mid+1\n            else:\n                return nums[0]\n    \n            left, right = 0, len(nums)-1\n    \n    def findMin(self, nums: List[int]) -> int:\n        left = 0\n        right = len(nums)-1\n        while(nums[left] > nums[right]):\n            mid = (left + right) // 2\n            \n            if nums[mid] > nums[right]:\n                left = mid + 1\n            else:\n                right = mid\n               \n        return nums[left]",
+      "submission_date": "2025-05-20T02:37:51Z"
+    },
+    "reverse-words-in-a-string": {
+      "slug": "reverse-words-in-a-string",
+      "lang": "python3",
+      "code": "class Solution:\n    def reverseWords(self, s: str) -> str:\n        reverse = []\n\n        itr = len(s) - 1\n\n        p1 = itr\n        p2 = itr\n\n        while itr > -1:\n            while itr > -1 and s[itr] == \" \":\n                itr -= 1\n\n            if itr == -1:\n                break\n\n            p2 = itr\n\n            while itr > -1 and s[itr] != \" \":\n                itr -= 1\n\n            if itr == -1:\n                p1 = 0\n            else:\n                p1 = itr + 1\n\n            reverse.append(s[p1 : p2 + 1])\n\n            itr -= 1\n        print(reverse)\n\n        return \" \".join(reverse)\n\n\nsol = Solution().reverseWords(\"  hello world  \")\nprint(sol)\n",
+      "submission_date": "2025-10-30T07:01:59Z"
+    },
+    "evaluate-reverse-polish-notation": {
+      "slug": "evaluate-reverse-polish-notation",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def evalRPN(self, tokens: List[str]) -> int:\n        stack = []\n\n        for ch in tokens:\n            if ch in \"+*/-\":\n                a = stack.pop()\n                b = stack.pop()\n\n                if ch == \"+\":\n                    stack.append(a + b)\n                elif ch == \"-\":\n                    stack.append(b - a)\n                elif ch == \"*\":\n                    stack.append(a * b)\n                else:\n                    stack.append(int(b / a))\n            else:\n                stack.append(int(ch))\n\n        return stack[-1]\n\n\nsol = Solution().evalRPN(\n    tokens=[\"10\", \"6\", \"9\", \"3\", \"+\", \"-11\", \"*\", \"/\", \"*\", \"17\", \"+\", \"5\", \"+\"]\n)\nprint(sol)\n",
+      "submission_date": "2025-12-25T10:18:22Z"
+    },
+    "lru-cache": {
+      "slug": "lru-cache",
+      "lang": "python3",
+      "code": "class Node:\n    def __init__(self, key, val, prev=None, next=None):\n        self.key = key\n        self.val = val\n        self.prev = prev\n        self.next = next\n\n\nclass LL:\n    def __init__(self):\n        self.head = None\n        self.tail = None\n\n    def insert_at_head(self, key, val):\n        new_node = Node(key=key, val=val)\n        # Empty LL\n        if self.head is None:\n            self.head = new_node\n            self.tail = new_node\n            return\n\n        self.head.prev = new_node\n        new_node.next = self.head\n        self.head = new_node\n\n    def move_to_head(self, node):\n        # Node to move is already at head\n        if self.head == node:\n            return\n\n        # Node to move is in between or at the tail\n        # 1. Save the adjacent nodes\n        next_node = node.next  # for a tail node it maybe None\n        previous_node = node.prev  # previous node can never be None\n\n        # 2. Break the link\n        node.next = None\n        node.prev = None\n\n        # 3. Rejoin the adjacent nodes\n        previous_node.next = next_node\n\n        if next_node is not None:\n            next_node.prev = previous_node\n        else:\n            # Means this node to move is at the tail\n            # so we just update the tail pointer\n            self.tail = previous_node\n\n        # 4. Move to head\n        self.head.prev = node\n        node.next = self.head\n        self.head = node\n\n    def delete_at_tail(self):\n        # Empty LL\n        if self.head is None:\n            return\n\n        # Only 1 Node (Both head and tail points to this node)\n        if self.head == self.tail:\n            self.head = None\n            self.tail = None\n            return\n\n        # More than 1 Node (head and tail points to different nodes)\n        # 1. Save the previous node(new tail) to update its pointer\n        previous_node = self.tail.prev\n\n        # 2. Break the link\n        self.tail.prev = None\n\n        # 3. Update the previous node's next pointer\n        previous_node.next = None\n\n        # 4. Update the tail pointer itself\n        self.tail = previous_node\n\n\nclass LRUCache:\n    def __init__(self, capacity: int):\n        self.capacity = capacity\n        self.memo = dict()\n        self.ll = LL()\n\n    @property\n    def capacity_left(self):\n        return self.capacity - len(self.memo)\n\n    def get(self, key: int) -> int:\n        node = self.memo.get(key, None)\n\n        if node:\n            self.ll.move_to_head(node)\n            return node.val\n\n        return -1\n\n    def put(self, key: int, value: int) -> None:\n        existing = self.memo.get(key, None)\n        if existing:\n            existing.val = value\n            self.ll.move_to_head(existing)\n            return\n\n        if self.capacity_left <= 0:\n            node_to_remove = self.ll.tail\n            self.ll.delete_at_tail()\n            self.memo.pop(node_to_remove.key)\n\n        self.ll.insert_at_head(key=key, val=value)\n        self.memo[key] = self.ll.head\n",
+      "submission_date": "2026-05-09T08:40:45Z"
+    },
+    "linked-list-cycle": {
+      "slug": "linked-list-cycle",
+      "lang": "python3",
+      "code": "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, x):\n#         self.val = x\n#         self.next = None\n\nclass Solution:\n    def hasCycle(self, head: Optional[ListNode]) -> bool:\n        slow = head\n        fast = head\n\n        while fast and fast.next is not None:\n            slow = slow.next\n            fast = fast.next.next\n            if slow == fast:\n                return True\n        return False\n",
+      "submission_date": "2026-01-06T11:47:03Z"
+    },
+    "copy-list-with-random-pointer": {
+      "slug": "copy-list-with-random-pointer",
+      "lang": "python3",
+      "code": "\"\"\"\n# Definition for a Node.\nclass Node:\n    def __init__(self, x: int, next: 'Node' = None, random: 'Node' = None):\n        self.val = int(x)\n        self.next = next\n        self.random = random\n\"\"\"\n\nclass Solution:\n    def copyRandomList(self, head: \"Optional[Node]\") -> \"Optional[Node]\":\n        memo = dict()\n        dummy = Node(0)\n        dum = dummy\n        temp = head\n\n        while temp:\n            new_node = Node(temp.val)\n            memo[temp] = new_node\n\n            dum.next = new_node\n\n            dum = dum.next\n            temp = temp.next\n\n        temp = head\n        dum = dummy.next\n\n        while temp:\n            dum.random = memo.get(temp.random, None)\n            dum = dum.next\n            temp = temp.next\n\n        return dummy.next\n",
+      "submission_date": "2026-01-09T08:34:30Z"
+    },
+    "single-number": {
+      "slug": "single-number",
+      "lang": "python3",
+      "code": "class Solution:\n    def singleNumber(self, nums: List[int]) -> int:\n        single_number = 0\n        for num in nums:\n            single_number ^= num\n\n        return single_number\n",
+      "submission_date": "2025-04-07T02:28:17Z"
+    },
+    "candy": {
+      "slug": "candy",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def candy(self, ratings: List[int]) -> int:\n        left = [1] * len(ratings)\n        right = [1] * len(ratings)\n\n        for i in range(1, len(ratings)):\n            if ratings[i] > ratings[i - 1]:\n                left[i] = left[i - 1] + 1\n\n        for i in range(len(ratings) - 2, -1, -1):\n            if ratings[i] > ratings[i + 1]:\n                right[i] = right[i + 1] + 1\n\n        candies = 0\n        for left_calc, right_calc in zip(left, right):\n            candies += max(left_calc, right_calc)\n\n        return candies\n\n\nsol = Solution().candy([1, 3, 4, 5, 2])\nprint(sol)\n",
+      "submission_date": "2025-10-21T13:14:37Z"
+    },
+    "gas-station": {
+      "slug": "gas-station",
+      "lang": "java",
+      "code": "import java.util.Arrays;\n\nclass Solution {\n  public int canCompleteCircuit(int[] gas, int[] cost) {\n    int total_gas = Arrays.stream(gas).sum();\n    int total_cost = Arrays.stream(cost).sum();\n\n    if (total_gas < total_cost) {\n      return -1;\n    }\n\n    int start = 0;\n    int current_gas = 0;\n    for (int i = 0; i < cost.length; i++) {\n      current_gas += gas[i] - cost[i];\n      if (current_gas < 0) {\n        current_gas = 0;\n        start = i + 1;\n      }\n    }\n    return start;\n  }\n  public static void main(String[] args) {\n    int gas[] = {1, 2, 3, 4, 5};\n    int cost[] = {3, 4, 5, 1, 2};\n    System.out.println(new Solution().canCompleteCircuit(gas, cost));\n  }\n}\n",
+      "submission_date": "2026-08-23T17:48:31Z"
+    },
+    "surrounded-regions": {
+      "slug": "surrounded-regions",
+      "lang": "python3",
+      "code": "from typing import *\nclass Solution:\n    def solve(self, board: List[List[str]]) -> None:\n        rows = len(board)\n        cols = len(board[0])\n\n        def is_not_valid(x, y):\n            return x<0 or y<0 or x>=rows or y>=cols\n\n        def is_on_edge(x, y):\n            return (x in (0, rows-1) or y in (0, cols-1))\n\n        def dfs(x, y):\n            if is_not_valid(x, y):\n                return False\n\n            if (x,y) in visited or board[x][y] == \"X\":\n                return True\n\n            if is_on_edge(x, y):\n                return False\n\n            visited.add((x, y))\n            surrounded = True\n\n            region_cells.append((x, y))\n            for dx, dy in [(1, 0), (0, 1), (-1, 0), (0, -1)]:\n                ans = dfs(x+dx, y+dy)\n                surrounded = surrounded and ans\n\n            return surrounded\n\n        visited = set()\n        for i in range(rows):\n            for j in range(cols):\n                if board[i][j] != \"X\" and (i, j) not in visited:\n                    region_cells = []  # Added: track cells in current region\n                    if dfs(i, j):  # Added: only modify board if region is surrounded\n                        for x, y in region_cells:\n                            board[x][y] = \"X\"\n\nboard = [[\"O\",\"O\",\"O\",\"O\",\"X\",\"X\"],[\"O\",\"O\",\"O\",\"O\",\"O\",\"O\"],[\"O\",\"X\",\"O\",\"X\",\"O\",\"O\"],[\"O\",\"X\",\"O\",\"O\",\"X\",\"O\"],[\"O\",\"X\",\"O\",\"X\",\"O\",\"O\"],[\"O\",\"X\",\"O\",\"O\",\"O\",\"O\"]]\nfor x in board:\n    print(x)\nSolution().solve(board)\nfor x in board:\n    print(x)\n\n",
+      "submission_date": "2025-07-28T03:55:38Z"
+    },
+    "sum-root-to-leaf-numbers": {
+      "slug": "sum-root-to-leaf-numbers",
+      "lang": "python3",
+      "code": "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def sumNumbers(self, root: Optional[TreeNode]) -> int:\n        def dfs(root, state=\"\"):\n            if root is None:\n                return\n\n            if root.left is None and root.right is None:\n                return int(state + str(root.val))\n\n            new_state = state + str(root.val)\n            left  = dfs(root.left, new_state)\n            right  = dfs(root.right, new_state)\n\n            try:\n                return left + right\n            except TypeError:\n                return left or right\n\n        return dfs(root)\n            ",
+      "submission_date": "2025-06-11T03:02:16Z"
+    },
+    "longest-consecutive-sequence": {
+      "slug": "longest-consecutive-sequence",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def longestConsecutive(self, nums: List[int]) -> int:\n        nums = set(nums)\n        longest = 0\n        for n in nums:\n            if n - 1 not in nums:\n                count = 1\n                while n + 1 in nums:\n                    count += 1\n                    n += 1\n                longest = max(longest, count)\n        return longest\n\n\nsol = Solution().longestConsecutive([100, 4, 200, 1, 3, 2])\nprint(sol)\n",
+      "submission_date": "2025-12-22T08:36:09Z"
+    },
+    "valid-palindrome": {
+      "slug": "valid-palindrome",
+      "lang": "python3",
+      "code": "class Solution:\n    def isPalindrome(self, s: str) -> bool:\n        clean_str = list()\n\n        for ch in s:\n            if ch.isalnum():\n                clean_str.append(ch.lower())\n        left = 0\n        right = len(clean_str) - 1\n        while left < right:\n            if clean_str[left] != clean_str[right]:\n                return False\n            left += 1\n            right -= 1\n\n        return True\n\n\nsol = Solution().isPalindrome(\"0P\")\nprint(sol)\n",
+      "submission_date": "2025-12-06T07:12:49Z"
+    },
+    "best-time-to-buy-and-sell-stock-ii": {
+      "slug": "best-time-to-buy-and-sell-stock-ii",
+      "lang": "java",
+      "code": "class Solution {\n  public int maxProfit(int[] prices) {\n    int maxProfit = 0;\n    int minBuyingPrice = Integer.MAX_VALUE;\n    int profit = 0;\n\n    for (int price : prices) {\n      profit = Math.max(0, price - minBuyingPrice);\n      if (profit > 0) {\n        maxProfit += profit;\n        minBuyingPrice = Integer.MAX_VALUE;\n      }\n      minBuyingPrice = Math.min(minBuyingPrice, price);\n    }\n    \n    return maxProfit;\n  }\n\n  public static void main(String[] args) {\n    int prices[] = { 7, 1, 5, 3, 6, 4 };\n    System.out.println(new Solution().maxProfit(prices));\n  }\n}",
+      "submission_date": "2026-08-20T16:39:11Z"
+    },
+    "best-time-to-buy-and-sell-stock": {
+      "slug": "best-time-to-buy-and-sell-stock",
+      "lang": "java",
+      "code": "class Solution {\n  public int maxProfit(int[] prices) {\n    int maxProfit = 0;\n    int minBuyingPrice = Integer.MAX_VALUE;\n\n    for (int price : prices) {\n      maxProfit = Math.max(maxProfit, price - minBuyingPrice);\n      minBuyingPrice = Math.min(minBuyingPrice, price);\n    }\n    return maxProfit;\n  }\n\n  public static void main(String[] args) {\n    int prices[] = { 7, 1, 5, 3, 6, 4 };\n    System.out.println(new Solution().maxProfit(prices));\n  }\n}",
+      "submission_date": "2026-08-20T09:01:47Z"
+    },
+    "flatten-binary-tree-to-linked-list": {
+      "slug": "flatten-binary-tree-to-linked-list",
+      "lang": "python3",
+      "code": "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def flatten(self, root: Optional[TreeNode]) -> None:\n        \"\"\"\n        Do not return anything, modify root in-place instead.\n        \"\"\"\n        def dfs(root):\n            if root is None:\n                return None\n\n            if not root.left and not root.right:\n                return root\n\n            left_tail = dfs(root.left)\n            right_tail = dfs(root.right)\n\n            if left_tail:\n                left_tail.right = root.right\n                root.right = root.left\n                root.left = None\n                \n                return right_tail or left_tail\n\n            return right_tail\n\n        dfs(root)",
+      "submission_date": "2025-06-10T03:16:02Z"
+    },
+    "path-sum": {
+      "slug": "path-sum",
+      "lang": "python3",
+      "code": "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def solve(self, root, target, sum):\n        if root is None:\n            return False\n\n        sum += root.val\n\n        if root.left is None and root.right is None:\n            return sum == target\n\n        left_sum = self.solve(root.left, target, sum)\n        right_sum = self.solve(root.right, target, sum)\n\n        return left_sum or right_sum\n\n    def hasPathSum(self, root: Optional[TreeNode], targetSum: int) -> bool:\n        return self.solve(root, targetSum, 0)\n",
+      "submission_date": "2025-05-27T02:20:58Z"
+    },
+    "minimum-depth-of-binary-tree": {
+      "slug": "minimum-depth-of-binary-tree",
+      "lang": "python3",
+      "code": "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def minDepth(self, root: Optional[TreeNode]) -> int:\n        q = deque()\n        if root:\n            q.append([root])\n        depth = 0\n        while len(q)>0:\n            depth += 1\n            level = q.popleft()\n            next_level = []\n            for node in level:\n                children = [node.left, node.right]\n\n                if all(child is None for child in children):\n                    return depth\n\n                for child in children:\n                    if child:\n                        next_level.append(child)\n            if next_level:\n                q.append(next_level)\n        return depth",
+      "submission_date": "2025-07-23T03:15:53Z"
+    },
+    "balanced-binary-tree": {
+      "slug": "balanced-binary-tree",
+      "lang": "python3",
+      "code": "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def isBalanced(self, root: Optional[TreeNode]) -> bool:\n        def dfs(root):\n            if root is None:\n                return 0, True\n            \n            l_height, l_balanced = dfs(root.left)\n            r_height, r_balanced = dfs(root.right)\n\n            max_h = max(l_height, r_height)\n\n            if not l_balanced or not r_balanced:\n                return max_h+1, False\n            \n            if abs(r_height - l_height) > 1:\n                return max_h+1, False\n            \n            return max_h+1, True\n\n        return dfs(root)[1]\n",
+      "submission_date": "2025-05-31T02:45:18Z"
+    },
+    "construct-binary-tree-from-inorder-and-postorder-traversal": {
+      "slug": "construct-binary-tree-from-inorder-and-postorder-traversal",
+      "lang": "python3",
+      "code": "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def buildTree(self, inorder: List[int], postorder: List[int]) -> Optional[TreeNode]:\n        start = 0\n        end = len(inorder)-1\n        inmap = {k: i for i, k in enumerate(inorder)}\n\n        def dfs(start, end):\n            if start > end:\n                return None\n\n            root = TreeNode(postorder.pop())\n            root_idx = inmap[root.val]\n            right_tree = dfs(root_idx+1, end)\n            left_tree = dfs(start, root_idx-1)\n            \n\n            root.left = left_tree\n            root.right = right_tree\n\n            return root\n        \n        return dfs(start, end)\n\n\n        ",
+      "submission_date": "2025-06-03T01:37:27Z"
+    },
+    "construct-binary-tree-from-preorder-and-inorder-traversal": {
+      "slug": "construct-binary-tree-from-preorder-and-inorder-traversal",
+      "lang": "python3",
+      "code": "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def buildTree(self, preorder: List[int], inorder: List[int]) -> Optional[TreeNode]:\n        inmap = {val: idx for idx, val in enumerate(inorder)}\n\n        start = 0\n        end = len(preorder) - 1\n        curr = 0\n\n        def gen_tree(start, end):\n            if start > end:\n                return None\n\n            nonlocal curr\n\n            root = TreeNode(val=preorder[curr])\n            curr += 1\n\n            root_idx = inmap[root.val]\n\n            root.left = gen_tree(start, root_idx - 1)\n            root.right = gen_tree(root_idx + 1, end)\n\n            return root\n        \n        return gen_tree(start, end)\n",
+      "submission_date": "2026-07-02T08:15:29Z"
+    },
+    "maximum-depth-of-binary-tree": {
+      "slug": "maximum-depth-of-binary-tree",
+      "lang": "python3",
+      "code": "class Solution:\n    def maxDepth(self, root: Optional[TreeNode]) -> int:\n        if root is None:\n            return 0\n\n        left_tree_depth = self.maxDepth(root.left)\n        right_tree_depth = self.maxDepth(root.right)\n\n        return 1 + max(left_tree_depth, right_tree_depth)",
+      "submission_date": "2026-05-09T08:56:27Z"
+    },
+    "binary-tree-zigzag-level-order-traversal": {
+      "slug": "binary-tree-zigzag-level-order-traversal",
+      "lang": "python3",
+      "code": "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def zigzagLevelOrder(self, root: Optional[TreeNode]) -> List[List[int]]:\n        q = deque()\n        if root:\n            q.append([root])\n        ans = []\n        rev = 1\n        while len(q)>0:\n            level = q.popleft()\n            ans.append([x.val for x in level[::rev]])\n            next_level = []\n            for node in level:\n                for child in (node.left, node.right):\n                    if child:\n                        next_level.append(child)\n            if next_level:\n                q.append(next_level)\n            rev = -rev\n        return ans",
+      "submission_date": "2025-07-23T02:28:20Z"
+    },
+    "binary-tree-level-order-traversal": {
+      "slug": "binary-tree-level-order-traversal",
+      "lang": "python3",
+      "code": "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nfrom collections import deque\nclass Solution:\n    def levelOrder(self, root: Optional[TreeNode]) -> List[List[int]]:\n        q = deque()\n        if root:\n            q.append([root])\n        ans = []\n        while len(q) > 0:\n            level = q.popleft()\n            ans.append([node.val for node in level])\n            next_level = []\n            for node in level:\n                for child in [node.left, node.right]:\n                    if child:\n                        next_level.append(child)\n            if next_level:\n                q.append(next_level)\n        return ans\n        \n        ",
+      "submission_date": "2025-07-21T03:44:01Z"
+    },
+    "symmetric-tree": {
+      "slug": "symmetric-tree",
+      "lang": "python3",
+      "code": "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def isSymmetric(self, root: Optional[TreeNode]) -> bool:\n        def isSym(t1, t2):\n            if t1 == t2 == None:\n                return True\n            \n            if not t1 or not t2:\n                return False\n            \n            return t1.val == t2.val and isSym(t1.left, t2.right) and isSym(t1.right, t2.left)\n        \n        return isSym(root.left, root.right)\n",
+      "submission_date": "2026-06-24T09:56:22Z"
+    },
+    "same-tree": {
+      "slug": "same-tree",
+      "lang": "python3",
+      "code": "class Solution:\n    def isSameTree(self, p: Optional[TreeNode], q: Optional[TreeNode]) -> bool:\n\n        p_traverse = []\n        q_traverse = []\n\n        def inorder(root, traverse):\n            if root is None:\n                traverse.append(None)\n                return\n\n            traverse.append(root.val)\n\n            inorder(root.left, traverse)\n            inorder(root.right, traverse)\n\n        inorder(p, p_traverse)\n        inorder(q, q_traverse)\n\n        return p_traverse == q_traverse\n",
+      "submission_date": "2026-05-09T09:08:57Z"
+    },
+    "reverse-linked-list-ii": {
+      "slug": "reverse-linked-list-ii",
+      "lang": "python3",
+      "code": "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def reverseBetween(\n        self, head: Optional[ListNode], left: int, right: int\n    ) -> Optional[ListNode]:\n        if head.next is None or left == right:\n            return head\n\n        dummy = ListNode(0, head)\n\n        p1_tail = dummy\n        for _ in range(left - 1):\n            p1_tail = p1_tail.next\n\n        first_reverse = p1_tail.next\n\n        prev = p1_tail\n        current = first_reverse\n        for _ in range(right - left + 1):\n            next_node = current.next\n            current.next = prev\n            prev = current\n            current = next_node\n\n        p1_tail.next = prev\n        first_reverse.next = current\n\n        return dummy.next\n",
+      "submission_date": "2026-05-01T09:26:30Z"
+    },
+    "decode-ways": {
+      "slug": "decode-ways",
+      "lang": "python3",
+      "code": "class Solution:\n    def numDecodings(self, s: str) -> int:\n        memo = {}\n        def dfs(idx, ss):\n\n            if idx >= len(s):\n                return 1\n\n            try:\n                return memo[idx]\n            except KeyError:\n                pass\n\n            one, two = 0, 0\n\n            t = s[idx]\n            if not t.startswith(\"0\"):\n                ss.append(t)\n                one = dfs(idx+1, ss)\n                ss.pop()\n\n            if idx+2 <= len(s):\n                t = s[idx:idx+2]\n                if not t.startswith(\"0\") and int(t) <= 26:\n                    ss.append(t)\n                    two = dfs(idx+2, ss)\n                    ss.pop()\n\n            memo[(idx)] = one+two\n\n            return one+two\n        return dfs(0, [])\n",
+      "submission_date": "2025-06-26T03:19:37Z"
+    },
+    "subsets-ii": {
+      "slug": "subsets-ii",
+      "lang": "python3",
+      "code": "from typing import *\nclass Solution:\n    def subsetsWithDup(self, nums: List[int]) -> List[List[int]]:\n        nums.sort()\n        ans = []\n        def dfs(index, subset):\n            ans.append(subset.copy())\n            seen = set()\n            for i in range(index, len(nums)):\n                n = nums[i]\n                if n not in seen:\n                    seen.add(n)\n                    subset.append(n)\n                    dfs(i+1, subset)\n                    subset.pop()\n        dfs(0, [])\n        return ans\nprint(Solution().subsetsWithDup([4, 4, 4, 1, 4]))",
+      "submission_date": "2025-07-17T03:08:07Z"
+    },
+    "merge-sorted-array": {
+      "slug": "merge-sorted-array",
+      "lang": "java",
+      "code": "class Solution {\n  public void merge(int[] nums1, int m, int[] nums2, int n) {\n    int i = m-1;\n    int j = n-1;\n    \n    int k = m+n-1;\n    while (i>=0 && j>=0) {\n      if (nums1[i] >= nums2[j]) {\n        nums1[k] = nums1[i];\n        i--;\n      } else {\n        nums1[k] = nums2[j];\n        j--;\n      }\n      k--;\n    }\n\n    while (i>=0) {\n      nums1[k] = nums1[i];\n      i--;\n      k--;\n    }\n\n    while (j>=0) {\n      nums1[k] = nums2[j];\n      j--;\n      k--;\n    }\n  }\n\n  public static void main(String[] args) {\n    Solution sol = new Solution();\n    int[] nums1 = {1, 3, 4, 8, 0, 0, 0, 0};\n    int[] nums2 = {5, 7, 9, 10};\n\n    sol.merge(nums1, 4, nums2, nums2.length);\n    for (int i : nums1) {\n      System.out.print(i + \" \");\n    }\n  }\n}",
+      "submission_date": "2026-08-19T07:45:34Z"
+    },
+    "partition-list": {
+      "slug": "partition-list",
+      "lang": "python3",
+      "code": "class Solution:\n    def partition(self, head: Optional[ListNode], x: int) -> Optional[ListNode]:\n        less_dummy = ListNode()\n        more_dummy = ListNode()\n\n        temp = head\n        less_part = less_dummy\n        more_part = more_dummy\n\n        while temp is not None:\n            next_node = temp.next\n\n            if temp.val < x:\n                less_part.next = temp\n                less_part = less_part.next\n                less_part.next = None\n            else:\n                more_part.next = temp\n                more_part = more_part.next\n                more_part.next = None\n\n            temp = next_node\n\n        less_part.next = more_dummy.next\n\n        return less_dummy.next",
+      "submission_date": "2026-05-08T08:50:17Z"
+    },
+    "largest-rectangle-in-histogram": {
+      "slug": "largest-rectangle-in-histogram",
+      "lang": "python3",
+      "code": "class Solution:\n    def largestRectangleArea(self, heights: List[int]) -> int:\n        # Makes sure that the increasing order pattern breaks\n        # and the are gets calculated.\n        heights.append(0)\n        \n        stack = deque()\n        max_area = 0\n        \n        for curr_i, curr_h in enumerate(heights):\n            \n            start_width_index = curr_i\n            \n            while stack and stack[-1][1] >= curr_h:\n                st_top_start_width, st_top_height = stack.pop()\n                \n                max_area = max(max_area, st_top_height * (curr_i - st_top_start_width))\n                \n                start_width_index = st_top_start_width\n                \n            stack.append((start_width_index, curr_h))\n            \n        return max_area",
+      "submission_date": "2024-06-24T01:43:29Z"
+    },
+    "remove-duplicates-from-sorted-list-ii": {
+      "slug": "remove-duplicates-from-sorted-list-ii",
+      "lang": "python3",
+      "code": "class Solution:\n    def deleteDuplicates(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        if head is None or head.next is None:\n            return head\n\n        dummy = ListNode(0, None)\n        ptr = dummy\n\n        temp = head\n        while temp is not None:\n            next_node = temp.next\n            isdup = False\n\n            while next_node and next_node.val == temp.val:\n                next_node = next_node.next\n                isdup = True\n\n            if isdup:\n                temp = next_node\n            else:\n                ptr.next = temp\n                ptr = temp\n                temp = temp.next\n        \n        if isdup:\n            ptr.next = None \n                \n        return dummy.next",
+      "submission_date": "2026-05-02T07:32:40Z"
+    },
+    "remove-duplicates-from-sorted-array-ii": {
+      "slug": "remove-duplicates-from-sorted-array-ii",
+      "lang": "java",
+      "code": "class Solution {\n  public int removeDuplicates(int[] nums) {\n    int k = 2, i = 2;\n    while (i < nums.length) {\n      if (nums[k - 2] != nums[i]) {\n        nums[k] = nums[i];\n        k++;\n      }\n      i++;\n    }\n    return k;\n  }\n\n  public static void main(String[] args) {\n    int nums[] = { 0, 0, 1, 1, 1, 1, 2, 3, 3 };\n    System.out.println(new Solution().removeDuplicates(nums));\n    for (int i : nums) {\n      System.out.print(i + \" \");\n    }\n  }\n}",
+      "submission_date": "2026-08-19T18:26:42Z"
+    },
+    "word-search": {
+      "slug": "word-search",
+      "lang": "python3",
+      "code": "from typing import *\nclass Solution:\n    def exist(self, board: List[List[str]], word: str) -> bool:\n        rows = len(board)\n        cols = len(board[0])\n        used = set()\n\n        def isValidPos(x, y):\n            return (x < rows and y < cols) and \\\n                    (x > -1 and y > -1)\n\n        def dfs(x, y, index):\n\n            if index == len(word):\n                return True\n\n            if not isValidPos(x, y):\n                return False\n\n            if (x, y) in used:\n                return False\n\n            if board[x][y] != word[index]:\n                return False\n            \n            used.add((x, y))\n\n            ans = (\n                dfs(x, y+1, index+1) or\n                dfs(x-1, y, index+1) or\n                dfs(x, y-1, index+1) or\n                dfs(x+1, y, index+1)\n            )\n\n            used.remove((x, y))\n\n            return ans\n\n        for i in range(rows):\n            for j in range(cols):\n                if dfs(i, j, 0):\n                    return True\n        return False\n\nSolution().exist(board = [[\"A\",\"B\",\"C\",\"E\"],[\"S\",\"F\",\"C\",\"S\"],[\"A\",\"D\",\"E\",\"E\"]], word = \"ABCCED\")",
+      "submission_date": "2025-07-12T04:16:09Z"
+    },
+    "subsets": {
+      "slug": "subsets",
+      "lang": "python3",
+      "code": "class Solution:\n    def subsets(self, nums: List[int]) -> List[List[int]]:\n        ans = []\n\n        def dfs(index, subset):\n            if index == len(nums):\n                return\n\n            ans.append(subset[:])\n\n            for i in range(index+1, len(nums)):\n                num = nums[i]\n                subset.append(num)\n                dfs(i, subset)\n                subset.pop()\n        \n        dfs(-1, [])\n        return ans",
+      "submission_date": "2025-07-05T02:01:09Z"
+    },
+    "combinations": {
+      "slug": "combinations",
+      "lang": "python3",
+      "code": "class Solution:\n    def combine(self, n: int, k: int) -> List[List[int]]:\n        ans = []\n        def dfs(index, combi):\n            if len(combi) == k:\n                ans.append(combi[:])\n                return\n            while index <= n:\n                combi.append(index)\n                dfs(index+1, combi)\n                combi.pop()\n                index += 1\n        dfs(1, [])\n        return ans\n\n",
+      "submission_date": "2025-07-03T03:52:48Z"
+    },
+    "minimum-window-substring": {
+      "slug": "minimum-window-substring",
+      "lang": "python3",
+      "code": "from collections import Counter\nfrom math import inf\n\n\nclass Solution:\n    def minWindow(self, s: str, t: str) -> str:\n        # Count frequency of each character in target string t\n\n        target_freq = Counter(t)\n\n        # Track frequency of characters in current window\n\n        window_freq = Counter()\n\n        # Count of characters in window that match required frequency\n\n        matched_chars = 0\n\n        # Left pointer of sliding window\n\n        left = 0\n\n        # Track the start index and length of minimum window found\n\n        min_start = -1\n\n        min_length = inf\n\n        # Expand window by moving right pointer\n\n        for right, char in enumerate(s):\n            # Add current character to window\n\n            window_freq[char] += 1\n\n            # Check if this character contributes to matching t\n\n            if char in target_freq and window_freq[char] <= target_freq[char]:\n                matched_chars += 1\n\n            # Contract window when all characters from t are matched\n\n            while matched_chars == len(t):\n                # Update minimum window if current window is smaller\n\n                current_window_size = right - left + 1\n\n                if current_window_size < min_length:\n                    min_length = current_window_size\n\n                    min_start = left\n\n                # Remove leftmost character from window\n\n                left_char = s[left]\n\n                if (\n                    left_char in target_freq\n                    and window_freq[left_char] <= target_freq[left_char]\n                ):\n                    matched_chars -= 1\n\n                window_freq[left_char] -= 1\n\n                # Move left pointer to contract window\n\n                left += 1\n\n        # Return empty string if no valid window found, otherwise return minimum window\n\n        return \"\" if min_start == -1 else s[min_start : min_start + min_length]\n",
+      "submission_date": "2025-12-16T05:31:31Z"
+    },
+    "search-a-2d-matrix": {
+      "slug": "search-a-2d-matrix",
+      "lang": "python3",
+      "code": "class Solution:\n    def searchMatrix(self, matrix: List[List[int]], target: int) -> bool:\n        rows = len(matrix)\n        cols = len(matrix[0])\n        n = rows*cols\n        left = 0\n        right = n-1\n\n        while left <= right:\n\n            mid = (left + right)//2\n\n            mid_val = matrix[mid//cols][mid%cols]\n            print(mid_val)\n\n            if mid_val == target:\n                return True\n\n            elif target < mid_val:\n                right = mid-1\n\n            else:\n                left = mid+1\n\n        return False\n",
+      "submission_date": "2025-05-17T02:42:33Z"
+    },
+    "set-matrix-zeroes": {
+      "slug": "set-matrix-zeroes",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def setZeroes(self, matrix: List[List[int]]) -> None:\n        rows = len(matrix)\n        cols = len(matrix[0])\n\n        def setNone(row, col):\n            for i in range(cols):\n                if matrix[row][i] != 0:\n                    matrix[row][i] = None\n\n            for i in range(rows):\n                if matrix[i][col] != 0:\n                    matrix[i][col] = None\n\n        for i in range(rows):\n            for j in range(cols):\n                if matrix[i][j] == 0:\n                    setNone(i, j)\n\n        for i in range(rows):\n            for j in range(cols):\n                if matrix[i][j] is None:\n                    matrix[i][j] = 0",
+      "submission_date": "2025-12-19T08:47:42Z"
+    },
+    "simplify-path": {
+      "slug": "simplify-path",
+      "lang": "python3",
+      "code": "class Solution:\n    def simplifyPath(self, path: str) -> str:\n        stack = []\n\n        path_split = path.split(\"/\")\n\n        for part in path_split:\n            if stack and part == \"..\":\n                stack.pop()\n            elif part not in (\"\", \".\", \"..\"):\n                stack.append(part)\n\n        return \"/\" + \"/\".join(stack)\n\n\n# sol = Solution().simplifyPath(\"/.../a/../b/c/../d/./\")\n# sol = Solution().simplifyPath(\"/.../\")\nsol = Solution().simplifyPath(\"/../\")\n# sol = Solution().simplifyPath(\"/a//b////c/d//././/..\")\n# sol = Solution().simplifyPath(\"/a/../../b/../c//.//\")\nprint(sol)\n",
+      "submission_date": "2025-12-24T11:35:35Z"
+    },
+    "sqrtx": {
+      "slug": "sqrtx",
+      "lang": "python3",
+      "code": "class Solution:\n    def mySqrt(self, x: int) -> int:\n        largest_perfect_square = 0\n        itr = 0\n        while itr <= x:\n            if itr*itr <= x:\n                largest_perfect_square = itr\n                itr += 1\n            else:\n                break\n        return largest_perfect_square\n\n",
+      "submission_date": "2025-04-05T02:25:42Z"
+    },
+    "text-justification": {
+      "slug": "text-justification",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def fullJustify(self, words: List[str], maxWidth: int) -> List[str]:\n        def split_words() -> List[List[str]]:\n            para = list()\n            curr_len = 0\n            new_line = list()\n            itr = 0\n\n            while itr < len(words):\n                filled = False\n                while itr < len(words) and curr_len + len(words[itr]) <= maxWidth:\n                    curr_len += len(words[itr]) + 1\n\n                    if curr_len > maxWidth:\n                        filled = True\n                        curr_len -= 1\n\n                    new_line.append(words[itr])\n                    itr += 1\n                    \n                if not filled:\n                    curr_len -= 1\n                \n                new_line.append(curr_len)\n                para.append(new_line)\n                new_line = list()\n                curr_len = 0\n\n            return para\n\n        para = split_words()\n        print(para)\n\n        def fill_slots(slots, spaces):\n            itr = 0\n            while spaces > 0:\n                slots[itr] += 1\n                spaces -= 1\n                itr = (itr + 1) % len(slots)\n\n        def space_slots(para):\n            slots = list()\n\n            for i in range(len(para) - 1):\n                word_list = para[i]\n                occupied = word_list.pop()\n                extra_spaces = maxWidth - occupied + len(word_list) - 1\n                no_of_slots = len(word_list) - 1\n                space_slot = [0] * (1 if no_of_slots == 0 else no_of_slots)\n                fill_slots(space_slot, extra_spaces)\n                if len(word_list) > 1:\n                    space_slot.append(0)\n                slots.append(space_slot)\n\n            # Handle last line with no justification\n\n            last_line = para[-1]\n            occupied = last_line.pop()\n            extra_spaces = maxWidth - occupied\n            no_of_slots = len(last_line) - 1\n            space_slot = [1] * no_of_slots\n            space_slot.append(extra_spaces)\n\n            slots.append(space_slot)\n            return slots\n\n        slot_spaces = space_slots(para)\n\n        print(para)\n        print(slot_spaces)\n\n        answer = []\n\n        for line, spaces in zip(para, slot_spaces):\n            phrase = []\n            for word, space in zip(line, spaces):\n                phrase.append(word)\n                phrase.append(\" \" * space)\n\n            answer.append(\"\".join(phrase))\n\n        return answer\n\n\nsol = Solution().fullJustify(\n    [\n        \"Science\",\n        \"is\",\n        \"what\",\n        \"we\",\n        \"understand\",\n        \"well\",\n        \"enough\",\n        \"to\",\n        \"explain\",\n        \"to\",\n        \"a\",\n        \"computer.\",\n        \"Art\",\n        \"is\",\n        \"everything\",\n        \"else\",\n        \"we\",\n        \"do\",\n    ],\n    maxWidth=20,\n    # [\"What\", \"must\", \"be\", \"acknowledgment\", \"shall\", \"be\"],\n    # maxWidth=16,\n)\nprint(sol)\n",
+      "submission_date": "2025-12-04T07:53:50Z"
+    },
+    "add-binary": {
+      "slug": "add-binary",
+      "lang": "python3",
+      "code": "class Solution:\n    def addBinary(self, a: str, b: str) -> str:\n        a_ptr = len(a)-1\n        b_ptr = len(b)-1\n        carry = 0\n        binary_sum = \"\"\n        while a_ptr >= 0 and b_ptr >= 0:\n            if (a[a_ptr], b[b_ptr]) == (\"0\", \"0\"):\n                if carry == 0:\n                    binary_sum = \"0\" + binary_sum\n                else:\n                    binary_sum = \"1\" + binary_sum\n                    carry = 0\n\n            elif (a[a_ptr], b[b_ptr]) == (\"1\", \"0\") or \\\n                (a[a_ptr], b[b_ptr]) == (\"0\", \"1\"):\n                if carry == 0:\n                    binary_sum = \"1\" + binary_sum\n                else:\n                    binary_sum = \"0\" + binary_sum\n\n            else:\n                if carry == 1:\n                    binary_sum = \"1\" + binary_sum\n                else:\n                    binary_sum = \"0\" + binary_sum\n                    carry = 1\n\n            a_ptr -= 1\n            b_ptr -= 1\n\n        while a_ptr >= 0:\n            if a[a_ptr] == \"0\":\n                if carry == 1:\n                    binary_sum = \"1\" + binary_sum\n                    carry = 0\n                else:\n                    binary_sum = \"0\" + binary_sum\n            else:\n                if carry == 1:\n                    binary_sum = \"0\" + binary_sum\n                else:\n                    binary_sum = \"1\" + binary_sum\n            a_ptr -= 1\n\n        while b_ptr >= 0:\n            if b[b_ptr] == \"0\":\n                if carry == 1:\n                    binary_sum = \"1\" + binary_sum\n                    carry = 0\n                else:\n                    binary_sum = \"0\" + binary_sum\n            else:\n                if carry == 1:\n                    binary_sum = \"0\" + binary_sum\n                else:\n                    binary_sum = \"1\" + binary_sum\n            b_ptr -= 1\n\n        if carry == 1:\n            binary_sum = \"1\" + binary_sum\n\n        return binary_sum\n",
+      "submission_date": "2025-04-05T03:22:47Z"
+    },
+    "plus-one": {
+      "slug": "plus-one",
+      "lang": "python3",
+      "code": "class Solution:\n    def plusOne(self, digits: List[int]) -> List[int]:\n        if digits[-1] != 9:\n            digits[-1] += 1\n            return digits\n\n        itr = len(digits)-1\n        while itr >= 0 and digits[itr] == 9:\n            digits[itr] = 0\n            itr -= 1\n\n        if itr == -1:\n            digits.insert(0, 1)\n        else:\n            digits[itr] += 1\n\n        return digits\n",
+      "submission_date": "2025-04-04T02:44:44Z"
+    },
+    "minimum-path-sum": {
+      "slug": "minimum-path-sum",
+      "lang": "python3",
+      "code": "class Solution:\n    def minPathSum(self, grid: List[List[int]]) -> int:\n        rows = len(grid)\n        cols = len(grid[0])\n\n        def isValidPos(x, y):\n            return x<rows and y<cols\n\n        memo = dict()\n        def dfs(x, y, total):\n            if x == rows-1 and y == cols-1:\n                return total+grid[x][y]\n\n            if not isValidPos(x, y):\n                return float(\"inf\")\n\n            try:\n                return total+memo[(x,y)]\n            except KeyError:\n                pass\n\n            ans = min(\n                dfs(x, y+1, total+grid[x][y]),\n                dfs(x+1, y, total+grid[x][y])\n            )\n\n            memo[(x,y)] = ans-total\n            return ans\n\n        return dfs(0, 0, 0)",
+      "submission_date": "2025-07-20T03:15:44Z"
+    },
+    "rotate-list": {
+      "slug": "rotate-list",
+      "lang": "python3",
+      "code": "class Solution:\n    def rotateRight(self, head: Optional[ListNode], k: int) -> Optional[ListNode]:\n        if not head:\n            return head\n\n        nodes = 1\n        tail = head\n\n        while tail.next is not None:\n            nodes += 1\n            tail = tail.next\n\n        k = k % nodes\n        if k == 0:\n            return head\n\n        new_tail = head\n        for _ in range(nodes - k - 1):\n            new_tail = new_tail.next\n\n        new_head = new_tail.next\n        new_tail.next = None\n        tail.next = head\n\n        return new_head\n",
+      "submission_date": "2026-05-04T06:42:37Z"
+    },
+    "length-of-last-word": {
+      "slug": "length-of-last-word",
+      "lang": "python3",
+      "code": "class Solution:\n    def lengthOfLastWord(self, s: str) -> int:\n        n = len(s)\n        i = n - 1\n        count = 0\n\n        while i >= 0 and s[i] == \" \":\n            i -= 1\n\n        while i >= 0 and s[i] != \" \":\n            count += 1\n            i -= 1\n\n        return count\n\n\nsol = Solution().lengthOfLastWord(\"hello\")\nprint(sol)\n",
+      "submission_date": "2025-10-27T08:21:28Z"
+    },
+    "insert-interval": {
+      "slug": "insert-interval",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def insert(\n        self, intervals: List[List[int]], newInterval: List[int]\n    ) -> List[List[int]]:\n        def merge():\n            output = list()\n            idx = 0\n            while idx < len(intervals):\n                a, b = intervals[idx]\n                nxt = idx + 1\n                while nxt < len(intervals) and intervals[nxt][0] <= b:\n                    b = max(b, intervals[nxt][1])\n                    nxt += 1\n\n                output.append([a, b])\n                idx = nxt\n            \n            return output\n\n        idx = 0\n        while idx < len(intervals) and newInterval[0] >= intervals[idx][0]:\n            idx += 1\n\n        intervals.insert(idx, newInterval)\n        return merge()\n\n\nsol = Solution().insert(intervals=[[1, 3], [6, 9]], newInterval=[2, 5])\nprint(sol)\n",
+      "submission_date": "2025-12-22T14:55:56Z"
+    },
+    "merge-intervals": {
+      "slug": "merge-intervals",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def merge(self, intervals: List[List[int]]) -> List[List[int]]:\n        intervals.sort(key=lambda x: x[0])\n\n        output = list()\n        idx = 0\n        while idx < len(intervals):\n            a, b = intervals[idx]\n            next = idx + 1\n            while next < len(intervals) and intervals[next][0] <= b:\n                b = max(b, intervals[next][1])\n                next += 1\n\n            output.append([a, b])\n            idx = next\n\n        return output\n\n\nsol = Solution().merge([[2, 3], [4, 5], [6, 7], [8, 9], [1, 10]])\nprint(sol)\n",
+      "submission_date": "2025-12-22T14:31:49Z"
+    },
+    "jump-game": {
+      "slug": "jump-game",
+      "lang": "java",
+      "code": "class Solution {\n  public boolean canJump(int[] nums) {\n    int maxReachIdx = 0;\n    int n = nums.length;\n    int num = 0;\n\n    for (int i = 0; i < nums.length; i++) {\n      num = nums[i];\n      maxReachIdx = Math.max(maxReachIdx, i + num);\n\n      if (num == 0 && maxReachIdx <= i && maxReachIdx < n-1) {\n        return false;\n      }\n    }\n    return true;\n  }\n\n  public static void main(String[] args) {\n    int nums[] = { 2, 3, 1, 1, 4 }; // true\n    int nums2[] = { 3, 2, 1, 0, 4 }; // false\n    System.out.println(new Solution().canJump(nums));\n    System.out.println(new Solution().canJump(nums2));\n  }\n}",
+      "submission_date": "2026-08-21T17:21:31Z"
+    },
+    "spiral-matrix": {
+      "slug": "spiral-matrix",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def spiralOrder(self, matrix: List[List[int]]) -> List[int]:\n        rows = len(matrix)\n        cols = len(matrix[0])\n        ans = []\n\n        left, right = 0, cols - 1\n        top, bottom = 0, rows - 1\n\n        while left <= right and top <= bottom:\n            x = left\n            while x <= right:\n                ans.append(matrix[top][x])\n                x += 1\n            top += 1\n\n            x = top\n            while x <= bottom:\n                ans.append(matrix[x][right])\n                x += 1\n            right -= 1\n\n            if top <= bottom:\n                x = right\n                while x >= left:\n                    ans.append(matrix[bottom][x])\n                    x -= 1\n                bottom -= 1\n\n            if left <= right:\n                x = bottom\n                while x >= top:\n                    ans.append(matrix[x][left])\n                    x -= 1\n                left += 1\n\n        return ans\n\n\nsol = Solution().spiralOrder(matrix=[[1, 2, 3], [4, 5, 6], [7, 8, 9]])\nsol = Solution().spiralOrder(matrix=[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]])\nprint(sol)\n",
+      "submission_date": "2025-12-18T10:20:40Z"
+    },
+    "maximum-subarray": {
+      "slug": "maximum-subarray",
+      "lang": "python3",
+      "code": "class Solution:\n    def maxSubArray(self, nums: List[int]) -> int:\n        max_curr = max_global = nums[0]\n\n        for i in range(1, len(nums)):\n            if max_curr < 0:\n                max_curr = 0\n                \n            max_curr += nums[i]\n            \n            if max_curr > max_global:\n                max_global = max_curr\n                \n            \n\n        return max_global\n        ",
+      "submission_date": "2024-08-12T05:06:17Z"
+    },
+    "group-anagrams": {
+      "slug": "group-anagrams",
+      "lang": "python3",
+      "code": "from collections import defaultdict\nfrom typing import List\n\n\nclass Solution:\n    def groupAnagrams(self, strs: List[str]) -> List[List[str]]:\n        anagrams = defaultdict(list)\n\n        for word in strs:\n            sorted_word = \"\".join(sorted(word))\n            anagrams[sorted_word].append(word)\n\n        return list(anagrams.values())\n\n\nsol = Solution().groupAnagrams([\"eat\", \"tea\", \"tan\", \"ate\", \"nat\", \"bat\"])\nprint(sol)\n",
+      "submission_date": "2025-12-22T07:50:26Z"
+    },
+    "rotate-image": {
+      "slug": "rotate-image",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def rotate(self, matrix: List[List[int]]) -> None:\n        n = len(matrix)\n\n        def transpose():\n            for i in range(n):\n                for j in range(n):\n                    if j > i:\n                        matrix[i][j], matrix[j][i] = matrix[j][i], matrix[i][j]\n\n        transpose()\n\n        for row in matrix:\n            row.reverse()\n\n\nmatrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]\n\nSolution().rotate(matrix)\n",
+      "submission_date": "2025-12-19T06:34:39Z"
+    },
+    "permutations-ii": {
+      "slug": "permutations-ii",
+      "lang": "python3",
+      "code": "from typing import *\nclass Solution:\n    def permuteUnique(self, nums: List[int]) -> List[List[int]]:\n        ans = []\n        used = set()\n        def dfs(perm):\n            if len(perm) == len(nums):\n                ans.append(perm[:])\n                return\n\n            seen = set()\n            for idx, n in enumerate(nums):\n                if n not in seen and idx not in used:\n                    seen.add(n)\n                    used.add(idx)\n                    perm.append(n)\n                    dfs(perm)\n                    used.remove(idx)\n                    perm.pop()\n        dfs([])\n        return ans\ncool = Solution().permuteUnique([1, 1, 2])\nprint(cool)",
+      "submission_date": "2025-07-15T02:45:23Z"
+    },
+    "jump-game-ii": {
+      "slug": "jump-game-ii",
+      "lang": "java",
+      "code": "class Solution {\n  public int jump(int[] nums) {\n    int farthestJumpIdx = 0;\n    int rangeEnd = 0;\n    int jumps = 0;\n\n    for (int i = 0; i < nums.length-1; i++) {\n      farthestJumpIdx = Math.max(farthestJumpIdx, i+nums[i]);\n      if (i == rangeEnd) {\n        jumps++;\n        rangeEnd = farthestJumpIdx;\n      }\n    }\n    return jumps;\n  }\n\n  public static void main(String[] args) {\n    int nums[] = { 2, 3, 0, 1, 4 }; // 2\n    System.out.println(new Solution().jump(nums));\n  }\n}",
+      "submission_date": "2026-08-21T18:31:15Z"
+    },
+    "trapping-rain-water": {
+      "slug": "trapping-rain-water",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def trap(self, height: List[int]) -> int:\n        n = len(height)\n\n        left, right = 0, n - 1\n        left_max, right_max = height[0], height[-1]\n        water = 0\n\n        while left < right:\n            if height[left] <= height[right]:\n                water += max(left_max - height[left], 0)\n                left_max = max(left_max, height[left])\n                left += 1\n            else:\n                water += max(right_max - height[right], 0)\n                right_max = max(right_max, height[right])\n                right -= 1\n\n        return water",
+      "submission_date": "2025-10-26T07:21:17Z"
+    },
+    "combination-sum-ii": {
+      "slug": "combination-sum-ii",
+      "lang": "python3",
+      "code": "class Solution:\n    def combinationSum2(self, candidates: List[int], target: int) -> List[List[int]]:\n        ans = []\n        def dfs(index, total, subset):\n            if total == target:\n                ans.append(subset.copy())\n                return\n            if total > target:\n                return\n\n            seen = set()\n            for i in range(index, len(candidates)):\n                n = candidates[i]\n                if n not in seen:\n                    seen.add(n)\n                    subset.append(n)\n                    dfs(i+1, total+n, subset)\n                    subset.pop()\n        candidates.sort()\n        dfs(0, 0, [])\n        return ans\n",
+      "submission_date": "2025-07-18T03:40:43Z"
+    },
+    "combination-sum": {
+      "slug": "combination-sum",
+      "lang": "python3",
+      "code": "class Solution:\n    def combinationSum(self, candidates: List[int], target: int) -> List[List[int]]:\n        ans = []\n        def dfs(combi, curr_sum, start=0):\n\n            if curr_sum == target:\n                ans.append(combi[:])\n                return \n            \n            if curr_sum > target:\n                return \n            \n            for idx in range(start, len(candidates)):\n                c = candidates[idx]\n                combi.append(c)\n                dfs(combi, curr_sum+c, idx)\n                combi.pop()\n            \n            # for idx, c in enumerate(candidates):\n            #     combi.append(c)\n            #     res = dfs(combi, curr_sum+c)\n            #     combi.pop()\n\n            \n        dfs([], 0)\n        return ans\n\n        \n        ",
+      "submission_date": "2025-07-04T05:29:54Z"
+    },
+    "valid-sudoku": {
+      "slug": "valid-sudoku",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def isValidSudoku(self, board: List[List[str]]) -> bool:\n        subs = [set() for _ in range(9)]\n        for i in range(9):\n            row = set()\n            col = set()\n            for j in range(9):\n                row_char = board[i][j]\n                col_char = board[j][i]\n\n                if row_char != \".\":\n                    xb = i // 3\n                    yb = j // 3\n\n                    idx = 3 * xb + yb\n\n                    sub_set = subs[idx]\n\n                    if row_char in sub_set or row_char in row:\n                        return False\n\n                    sub_set.add(row_char)\n                    row.add(row_char)\n\n                if col_char != \".\":\n                    if col_char in col:\n                        return False\n                    col.add(col_char)\n\n        return True\n\n\nsol = Solution().isValidSudoku(\n    [\n        [\".\", \".\", \"4\", \".\", \".\", \".\", \"6\", \"3\", \".\"],\n        [\".\", \".\", \".\", \".\", \".\", \".\", \".\", \".\", \".\"],\n        [\"5\", \".\", \".\", \".\", \".\", \".\", \".\", \"9\", \".\"],\n        [\".\", \".\", \".\", \"5\", \"6\", \".\", \".\", \".\", \".\"],\n        [\"4\", \".\", \"3\", \".\", \".\", \".\", \".\", \".\", \"1\"],\n        [\".\", \".\", \".\", \"7\", \".\", \".\", \".\", \".\", \".\"],\n        [\".\", \".\", \".\", \"5\", \".\", \".\", \".\", \".\", \".\"],\n        [\".\", \".\", \".\", \".\", \".\", \".\", \".\", \".\", \".\"],\n        [\".\", \".\", \".\", \".\", \".\", \".\", \".\", \".\", \".\"],\n    ]\n)\nprint(sol)\n",
+      "submission_date": "2025-12-17T13:05:20Z"
+    },
+    "search-insert-position": {
+      "slug": "search-insert-position",
+      "lang": "python3",
+      "code": "class Solution:\n    def searchInsert(self, nums: List[int], target: int) -> int:\n        left = 0\n        right = len(nums)-1\n        boundary = len(nums)\n        while left <= right:\n            mid = (left+right)//2\n            if nums[mid] == target:\n                return mid\n\n            if nums[mid] >= target:\n                boundary = mid\n                right = mid-1\n            else:\n                left = mid+1\n\n        return boundary",
+      "submission_date": "2025-05-24T03:06:33Z"
+    },
+    "find-first-and-last-position-of-element-in-sorted-array": {
+      "slug": "find-first-and-last-position-of-element-in-sorted-array",
+      "lang": "python3",
+      "code": "class Solution:\n    def binary_search(self, left, right, nums, target):\n        while left <= right:\n            mid = (left+right)//2\n            if nums[mid] == target:\n                return mid\n            elif target < nums[mid]:\n                right = mid-1\n            else:\n                left = mid+1\n        return -1\n\n    def searchRange(self, nums: List[int], target: int) -> List[int]:\n        left = 0\n        right = len(nums)-1\n\n        def solve(left, right, prev_find, search_direction):\n            find = self.binary_search(left, right, nums, target)\n\n            if find == -1:\n                return prev_find\n\n            if search_direction == \"left\":\n                return solve(left, find-1, find, search_direction)\n            else:\n                return solve(find+1, right, find, search_direction)\n\n        ans = [\n                solve(left, right, -1, \"left\"),\n                solve(left, right, -1, \"right\")\n            ]\n\n        return ans",
+      "submission_date": "2025-05-19T00:37:44Z"
+    },
+    "search-in-rotated-sorted-array": {
+      "slug": "search-in-rotated-sorted-array",
+      "lang": "python3",
+      "code": "class Solution:\n\n    def bin(self, nums, left, right, target):\n        while left <= right:\n            mid = (left + right) //2\n            if nums[mid] == target:\n                return mid\n            elif target < nums[mid]:\n                right = mid-1\n            else:\n                left = mid+1\n        return -1\n\n\n    def search(self, nums: List[int], target: int) -> int:\n        left = 0\n        right = len(nums)-1\n        boundary = 0\n\n        while nums[left] > nums[right]:\n            mid = (left + right)//2\n\n            if nums[mid] < nums[right]:\n                right = mid\n            else:\n                left = mid+1\n        \n        right = len(nums)-1\n\n        se = self.bin(nums, left, right, target)\n        if se != -1:\n            return se\n        \n        right = left-1\n        left = 0\n\n        se = self.bin(nums, left, right, target)\n\n        return se",
+      "submission_date": "2025-05-24T03:47:06Z"
+    },
+    "substring-with-concatenation-of-all-words": {
+      "slug": "substring-with-concatenation-of-all-words",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def findSubstring(self, s: str, words: List[str]) -> List[int]:\n        \n        if len(set(words)) == 1:\n\n            words = [''.join(words)]\n        \n        n = len(words[0])\n\n        memo = dict()\n\n        for word in words:\n            try:\n                memo[word] += 1\n            except KeyError:\n                memo[word] = 1\n\n        left = 0\n        right = n\n        answer = []\n        while left < len(s):\n            avail = memo.copy()\n            wc = 0\n            previous = left\n            word = s[previous:right]\n            while right <= len(s) and word in avail and avail[word] > 0:\n                # print(\"wc\", wc, \"word=\", word)\n                avail[word] -= 1\n                wc += 1\n                previous = right\n                right += n\n                word = s[previous:right]\n\n            if wc == len(words):\n                answer.append(left)\n\n            left += 1\n            right = left + n\n\n        return answer\n\n\nsol = Solution().findSubstring(\n    s=\"wordgoodgoodgoodbestword\", words=[\"word\", \"good\", \"best\", \"good\"]\n)\nprint(sol)\n",
+      "submission_date": "2025-12-13T15:49:05Z"
+    },
+    "find-the-index-of-the-first-occurrence-in-a-string": {
+      "slug": "find-the-index-of-the-first-occurrence-in-a-string",
+      "lang": "python3",
+      "code": "class Solution:\n    def strStr(self, haystack: str, needle: str) -> int:\n        for i in range(len(haystack)-len(needle)+1):\n            if haystack[i] == needle[0]:\n                if haystack[i : i + len(needle)] == needle:\n                    return i\n\n        return -1\n\n\nsol = Solution().strStr(haystack=\"leetcode\", needle=\"tco\")\nprint(sol)\n",
+      "submission_date": "2025-10-31T07:01:29Z"
+    },
+    "remove-element": {
+      "slug": "remove-element",
+      "lang": "java",
+      "code": "class Solution {\n  public int removeElement(int[] nums, int val) {\n    int k = 0;\n    for (int num : nums) {\n      if (num != val) {\n        nums[k] = num;\n        k++;\n      }\n    }\n    return k;\n  }\n\n  public static void main(String[] args) {\n    int[] nums = {3, 2, 2, 3};\n    int val = 3;\n    Solution sol = new Solution();\n    System.out.println(sol.removeElement(nums, val));\n  }\n}",
+      "submission_date": "2026-08-19T08:00:30Z"
+    },
+    "remove-duplicates-from-sorted-array": {
+      "slug": "remove-duplicates-from-sorted-array",
+      "lang": "java",
+      "code": "class Solution {\n  public int removeDuplicates(int[] nums) {\n    int k = 0;\n    for (int i = 0; i < nums.length; i++) {\n      if (nums[k] != nums[i]) {\n        k++;\n        nums[k] = nums[i];\n      }\n    }\n    return k + 1;\n  }\n\n  public static void main(String[] args) {\n    int nums[] = { 0, 0, 1, 1, 1, 2, 2, 3, 3, 4 };\n    System.out.println(new Solution().removeDuplicates(nums));\n  }\n}",
+      "submission_date": "2026-08-19T17:21:48Z"
+    },
+    "reverse-nodes-in-k-group": {
+      "slug": "reverse-nodes-in-k-group",
+      "lang": "python3",
+      "code": "class Solution:\n    def reverseKGroup(self, head: Optional[ListNode], k: int) -> Optional[ListNode]:\n        if not head or head.next is None:\n            return head\n\n        def get_len():\n            temp = head\n            count = 0\n\n            while temp is not None:\n                count += 1\n                temp = temp.next\n\n            return count\n\n        def reverseLL(start):\n            new_head = start\n\n            for _ in range(k-1):\n                next_node = start.next\n                start.next = start.next.next\n                next_node.next = new_head\n                new_head = next_node\n\n            return new_head\n\n        nodes = get_len()\n        groups = nodes // k\n        dummy = ListNode(0, head)\n        temp = dummy\n        for _ in range(groups):\n            temp.next = reverseLL(temp.next)\n            for __ in range(k):\n                temp = temp.next\n\n        return dummy.next\n",
+      "submission_date": "2026-05-01T16:04:57Z"
+    },
+    "generate-parentheses": {
+      "slug": "generate-parentheses",
+      "lang": "python3",
+      "code": "class Solution:\n\n    def generateParenthesis(self, n: int) -> List[str]:\n        def dfs(curr_str, opening, closing):\n            \n            if opening == 0 and closing == 0:\n                answer.append(curr_str)\n                return\n                \n            if opening:\n                dfs(curr_str + \"(\", opening-1, closing)\n                \n            if closing and opening != closing:\n                dfs(curr_str + \")\", opening, closing-1)\n                \n        answer = []\n        \n        dfs(\"\", n, n)\n        \n        return answer",
+      "submission_date": "2024-06-21T15:07:01Z"
+    },
+    "merge-two-sorted-lists": {
+      "slug": "merge-two-sorted-lists",
+      "lang": "python3",
+      "code": "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def mergeTwoLists(self, list1: Optional[ListNode], list2: Optional[ListNode]) -> Optional[ListNode]:\n        dummy = ListNode()\n\n        temp = dummy\n\n        while list1 and list2:\n            a = list1.val\n            b = list2.val\n\n            if a < b:\n                temp.next = ListNode(a)\n                list1 = list1.next\n            else:\n                temp.next = ListNode(b)\n                list2 = list2.next\n\n            temp = temp.next\n\n        if list1:\n            temp.next = list1\n\n        if list2:\n            temp.next = list2\n\n        return dummy.next",
+      "submission_date": "2026-01-08T12:55:42Z"
+    },
+    "valid-parentheses": {
+      "slug": "valid-parentheses",
+      "lang": "python3",
+      "code": "class Solution:\n    def isValid(self, s: str) -> bool:\n        stack = list()\n\n        for ch in s:\n            if ch in \"({[\":\n                stack.append(ch)\n                continue\n\n            if not stack:\n                return False\n\n            top = stack[-1]\n            if (\n                (top == \"(\" and ch != \")\")\n                or (top == \"{\" and ch != \"}\")\n                or (top == \"[\" and ch != \"]\")\n            ):\n                return False\n            else:\n                stack.pop()\n\n        return stack == []\n\n\nsol = Solution().isValid(\"(([]{}\")\nprint(sol)\n",
+      "submission_date": "2025-12-23T06:20:12Z"
+    },
+    "remove-nth-node-from-end-of-list": {
+      "slug": "remove-nth-node-from-end-of-list",
+      "lang": "python3",
+      "code": "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def removeNthFromEnd(self, head: Optional[ListNode], n: int) -> Optional[ListNode]:\n        \"\"\"\n        Solves the problem in a single pass using fast and slow pointers\n        \"\"\"\n        dummy = ListNode(0, head)\n        fast = dummy\n        slow = dummy\n\n        for _ in range(n + 1):\n            fast = fast.next\n\n        while fast is not None:\n            fast = fast.next\n            slow = slow.next\n\n        slow.next = slow.next.next\n\n        return dummy.next\n",
+      "submission_date": "2026-05-02T06:18:27Z"
+    },
+    "letter-combinations-of-a-phone-number": {
+      "slug": "letter-combinations-of-a-phone-number",
+      "lang": "python3",
+      "code": "from typing import *\nclass Solution:\n\n    def letterCombinations(self, digits: str) -> List[str]:\n        if not digits:\n            return []\n        num_map = {\n            2: [\"a\", \"b\", \"c\"],\n            3: [\"d\", \"e\", \"f\"],\n            4: [\"g\", \"h\", \"i\"],\n            5: [\"j\", \"k\", \"l\"],\n            6: [\"m\", \"n\", \"o\"],\n            7: [\"p\", \"q\", \"r\", \"s\"],\n            8: [\"t\", \"u\", \"v\"],\n            9: [\"w\", \"x\", \"y\", \"z\"]\n        }\n\n        digits = [int(x) for x in list(digits)]\n        res = []\n\n        def solve(idx, char):\n            if idx == len(digits):\n                res.append(\"\".join(char))\n                return\n\n            for ch in num_map[digits[idx]]:\n                char.append(ch)\n                solve(idx+1, char)\n                char.pop()\n\n        solve(0, [])\n        return res\n\n\n        ",
+      "submission_date": "2025-06-20T03:20:17Z"
+    },
+    "3sum": {
+      "slug": "3sum",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def threeSum(self, nums: List[int]) -> List[List[int]]:\n        nums.sort()\n        answers = list()\n\n        for i in range(len(nums)):\n            target = nums[i]\n\n            if target > 1:\n                break\n\n            if i > 0 and nums[i - 1] == nums[i]:\n                continue\n\n            left = i + 1\n            right = len(nums) - 1\n\n            while left < right:\n                total = nums[left] + nums[right]\n\n                if total == -target:\n                    answers.append([target, nums[left], nums[right]])\n                    left += 1\n                    while left < right and nums[left - 1] == nums[left]:\n                        left += 1\n\n                elif total < -target:\n                    left += 1\n\n                else:\n                    right -= 1\n\n        return answers\n\n\nsol = Solution().threeSum([-1, -4, -1, 0, 2, 1])\nprint(sol)\n",
+      "submission_date": "2025-12-10T07:04:23Z"
+    },
+    "longest-common-prefix": {
+      "slug": "longest-common-prefix",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def longestCommonPrefix(self, strs: List[str]) -> str:\n        ans = []\n\n        for idx, ch in enumerate(strs[0]):\n            all_same = True\n            for s in strs:\n                try:\n                    if s[idx] != ch:\n                        raise IndexError\n                except IndexError:\n                    all_same = False\n                    break\n\n            if not all_same:\n                break\n\n            ans.append(ch)\n\n        return \"\".join(ans)\n\n\nsol = Solution().longestCommonPrefix([\"flower\", \"flow\", \"flight\"])\nprint(sol)\n",
+      "submission_date": "2025-10-27T08:37:03Z"
+    },
+    "roman-to-integer": {
+      "slug": "roman-to-integer",
+      "lang": "python3",
+      "code": "class Solution:\n    def romanToInt(self, s: str) -> int:\n        values = {\"M\": 1000, \"D\": 500, \"C\": 100, \"L\": 50, \"X\": 10, \"V\": 5, \"I\": 1}\n        decimal = 0\n        for i in range(len(s)):\n            if i != len(s) - 1:\n                if values[s[i]] < values[s[i + 1]]:\n                    decimal += -values[s[i]]\n                else:\n                    decimal += values[s[i]]\n            else:\n                decimal += values[s[i]]\n        return decimal\n\n\nsol = Solution().romanToInt(\"MCMXCIV\")\nprint(sol)\n",
+      "submission_date": "2025-10-26T14:31:20Z"
+    },
+    "integer-to-roman": {
+      "slug": "integer-to-roman",
+      "lang": "python3",
+      "code": "class Solution:\n    def intToRoman(self, num: int) -> str:\n        romans = [\n            (1000, \"M\"),\n            (900, \"CM\"),\n            (500, \"D\"),\n            (400, \"CD\"),\n            (100, \"C\"),\n            (90, \"XC\"),\n            (50, \"L\"),\n            (40, \"XL\"),\n            (10, \"X\"),\n            (9, \"IX\"),\n            (5, \"V\"),\n            (4, \"IV\"),\n            (1, \"I\"),\n        ]\n        ans = []\n\n        for value, symbol in romans:\n            if num == 0:\n                break\n            count = num // value\n            ans.append(symbol * count)\n            num -= count * value\n\n        return \"\".join(ans)\n\n\nsol = Solution().intToRoman(3749)\nprint(sol)\n",
+      "submission_date": "2025-10-27T08:13:51Z"
+    },
+    "palindrome-number": {
+      "slug": "palindrome-number",
+      "lang": "python3",
+      "code": "class Solution:\n    def isPalindrome(self, x: int) -> bool:\n        if x < 0:\n            return False\n\n        original = x\n        rev = 0\n\n        while x > 0:\n            rev *= 10\n            last_dig = x%10\n            rev += last_dig\n            x = int(x/10)\n\n        return original == rev\n",
+      "submission_date": "2025-04-04T02:14:10Z"
+    },
+    "zigzag-conversion": {
+      "slug": "zigzag-conversion",
+      "lang": "python3",
+      "code": "class Solution:\n    def convert(self, s: str, numRows: int) -> str:\n        array = []\n        for _ in range(numRows):\n            array.append([])\n\n        k = 0\n        incre = 1\n        for i in range(len(s)):\n            array[k].append(s[i])\n\n            if incre == 1 and k == numRows - 1:\n                incre = -1\n\n            if incre == -1 and k == 0:\n                incre = 1\n\n            if numRows > 1:\n                k += incre\n\n        ans = []\n        for row in array:\n            ans.append(\"\".join(row))\n\n        return \"\".join(ans)\n\n\nsol = Solution().convert(\"AB\", 4)\nprint(sol)\n",
+      "submission_date": "2025-10-31T06:47:21Z"
+    },
+    "longest-substring-without-repeating-characters": {
+      "slug": "longest-substring-without-repeating-characters",
+      "lang": "python3",
+      "code": "class Solution:\n    def lengthOfLongestSubstring(self, s: str) -> int:\n        max_length = 0\n\n        left = 0\n        right = 0\n        curr = 0\n        seen = dict()\n        while right < len(s):\n            if s[right] in seen:\n                max_length = max(max_length, curr)\n                dup_idx = seen[s[right]]\n                while left <= dup_idx:\n                    seen.pop(s[left])\n                    left += 1\n                    curr -= 1\n            else:\n                seen[s[right]] = right\n                curr += 1\n                right += 1\n\n        max_length = max(max_length, curr)\n\n        return max_length\n\n\nsol = Solution().lengthOfLongestSubstring(\"dvdf\")\nprint(sol)\n",
+      "submission_date": "2025-12-12T06:59:58Z"
+    },
+    "add-two-numbers": {
+      "slug": "add-two-numbers",
+      "lang": "python3",
+      "code": "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def addTwoNumbers(self, l1: Optional[ListNode], l2: Optional[ListNode]) -> Optional[ListNode]:\n        dummy = ListNode()\n        temp = dummy\n        carry = 0\n        while l1 or l2 or carry:\n            total = carry\n\n            if l1:\n                total += l1.val\n                l1 = l1.next\n            if l2:\n                total += l2.val\n                l2 = l2.next\n\n            if total > 9:\n                carry = 1\n            elif carry > 0:\n                carry = 0\n\n            temp.next = ListNode(val=total % 10)\n            temp = temp.next\n\n        return dummy.next\n\n",
+      "submission_date": "2026-01-07T15:11:57Z"
+    },
+    "two-sum": {
+      "slug": "two-sum",
+      "lang": "python3",
+      "code": "from typing import List\n\n\nclass Solution:\n    def twoSum(self, nums: List[int], target: int) -> List[int]:\n        memo = dict()\n\n        for idx, num in enumerate(nums):\n            if target - num in memo:\n                return [memo.get(target - num), idx]\n\n            memo[num] = idx\n\n\nsol = Solution().twoSum(nums=[2, 7, 11, 15], target=9)\nprint(sol)\n",
+      "submission_date": "2025-12-22T07:55:14Z"
     }
   }
 }

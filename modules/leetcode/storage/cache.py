@@ -54,23 +54,42 @@ class PendingCacheStore:
         """Returns slugs that still have at least one part outstanding."""
         return list(self._load_cache().keys())
 
-    def refresh_pending_cache(self, slugs: list[str]) -> dict[str, dict[str, bool]]:
+    def refresh_pending_cache(
+        self,
+        slugs: list[str],
+        initial_state: dict[str, dict[str, bool]] | None = None,
+    ) -> dict[str, dict[str, bool]]:
         """
         Merges newly-fetched solved slugs into the cache. Slugs already
-        tracked keep their existing per-part progress; only genuinely new
-        slugs are added, with all parts set to False.
+        tracked keep their existing per-part progress.
+
+        For a genuinely new slug, `initial_state` (if given) supplies its
+        true per-part completion — e.g. reconstructed from existing
+        problem/submission records, for a slug that was already synced
+        before this cache existed or was reset — instead of assuming
+        nothing has been fetched yet. A slug whose initial state already
+        has every part complete is skipped entirely, matching
+        `mark_part_fetched`'s drop-on-completion behavior.
         """
         cache = self._load_cache()
+        initial_state = initial_state or {}
         newly_added = 0
+        skipped_already_complete = 0
         for slug in slugs:
-            if slug not in cache:
-                cache[slug] = {part: False for part in self.CACHE_PARTS}
-                newly_added += 1
+            if slug in cache:
+                continue
+            state = initial_state.get(slug)
+            if state and all(state.get(part, False) for part in self.CACHE_PARTS):
+                skipped_already_complete += 1
+                continue
+            cache[slug] = {part: bool(state.get(part, False)) if state else False for part in self.CACHE_PARTS}
+            newly_added += 1
         self._save_cache(cache)
         logger.info(
             "pending_cache_refreshed",
             fetched_count=len(slugs),
             newly_added_count=newly_added,
+            skipped_already_complete_count=skipped_already_complete,
             total_tracked=len(cache),
         )
         return cache

@@ -41,6 +41,7 @@ class LeetCodeSyncManager:
         least one populated part.
         """
         log = logger.bind(stage="sync")
+        self.storage.reconcile_pending_cache()
         cache = self.storage.read_pending_cache()
 
         if force_refresh or not cache:

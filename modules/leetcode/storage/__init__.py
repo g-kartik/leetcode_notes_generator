@@ -180,8 +180,56 @@ class LeetCodeDSAStorage:
         return self.cache.get_pending_slugs()
 
     def refresh_pending_cache(self, slugs: list[str]) -> dict[str, dict[str, bool]]:
-        """Merges newly-fetched solved slugs into the cache, preserving existing per-part progress."""
-        return self.cache.refresh_pending_cache(slugs)
+        """
+        Merges newly-fetched solved slugs into the cache, preserving existing
+        per-part progress. For slugs not already tracked, reconstructs true
+        per-part completion from the existing problem/submission records (so
+        a problem already fully synced in problems.json/submissions.json —
+        e.g. after the pending cache was reset or rebuilt — isn't re-flagged
+        as fully pending) and skips adding it if every part is already done.
+        """
+        tracked = self.cache.read_pending_cache()
+        initial_state = {}
+        for slug in slugs:
+            if slug in tracked:
+                continue
+            problem = self.problems.get_by_slug(slug)
+            initial_state[slug] = {
+                "question": bool(problem and problem.raw_question_html),
+                "images": bool(problem and problem.imgs_local_paths),
+                "submission": self.submissions.exists(slug),
+            }
+        return self.cache.refresh_pending_cache(slugs, initial_state=initial_state)
+
+    def reconcile_pending_cache(self) -> int:
+        """
+        Cross-checks every slug still tracked in the pending cache against the
+        actual problem/submission records and marks any part that's genuinely
+        already fetched but not yet reflected in the cache — e.g. the cache
+        fell out of sync with problems.json/submissions.json after being
+        edited by hand or rebuilt from a stale state. A slug found fully
+        complete is dropped from the cache (via the normal mark_part_fetched
+        behavior). Returns the number of parts marked as a result.
+
+        Cheap and read-mostly (a no-op write per genuinely-stale part), so
+        it's safe to call unconditionally before resolving pending slugs.
+        """
+        tracked = self.cache.read_pending_cache()
+        marked = 0
+        for slug, parts in tracked.items():
+            problem = self.problems.get_by_slug(slug)
+            actual = {
+                "question": bool(problem and problem.raw_question_html),
+                "images": bool(problem and problem.imgs_local_paths),
+                "submission": self.submissions.exists(slug),
+            }
+            for part, done in actual.items():
+                if done and not parts.get(part, False):
+                    self.cache.mark_part_fetched(slug, part)
+                    marked += 1
+        if marked:
+            logger.info("pending_cache_reconciled", parts_marked=marked)
+        return marked
 
     def is_part_pending(self, slug: str, part: str) -> bool:
         """True if `part` for `slug` is still outstanding in the cache."""
