@@ -153,6 +153,84 @@
           ]
         }
       }
+    ],
+    "binary-search": [
+      {
+        "generated_at": "2026-08-25T20:33:17.760854",
+        "provider": "claude_code",
+        "content": {
+          "problem_summary": "Given a sorted (ascending) array of unique integers and a target value, find the index of the target using an algorithm that runs in O(log n) time, or return -1 if it's not present.",
+          "pattern": [
+            "Binary Search"
+          ],
+          "core_idea": [
+            "Repeatedly halve the search space by comparing the target to the middle element.",
+            "If nums[mid] equals target, return mid immediately.",
+            "If nums[mid] < target, the target must be in the right half, so move left to mid+1.",
+            "If nums[mid] > target, the target must be in the left half, so move right to mid-1."
+          ],
+          "invariant": [
+            "If the target exists in nums, it always lies within the current [left, right] window.",
+            "The search window [left, right] shrinks by at least half each iteration.",
+            "nums remains sorted throughout (never mutated), which is what makes discarding half the array valid."
+          ],
+          "trap": [
+            "Using mid = (left + right) // 2 can overflow in languages with fixed-width integers; left + (right - left) // 2 avoids that (not an issue in Python but good habit).",
+            "Off-by-one errors in updating left/right (must be mid+1 / mid-1, not mid, to guarantee termination).",
+            "Loop condition must be left <= right (not <), otherwise a single-element window is skipped.",
+            "Forgetting to return -1 when the loop exits without finding the target."
+          ],
+          "recognition_clue": [
+            "Array is explicitly stated to be sorted in ascending order.",
+            "Requirement of O(log n) runtime complexity rules out linear scan.",
+            "All elements are unique, so there's exactly one valid index to find (no duplicate-handling complexity)."
+          ],
+          "complexity_time": "O(log n)",
+          "complexity_space": "O(1)",
+          "takeaway": [
+            "Sortedness + a required sub-linear time bound is the classic signal to reach for binary search: use inclusive bounds (left <= right) and always move the excluded boundary past mid (mid+1/mid-1) to guarantee progress and correctness."
+          ]
+        }
+      }
+    ],
+    "gas-station": [
+      {
+        "generated_at": "2026-08-25T20:39:38.481701",
+        "provider": "claude_code",
+        "content": {
+          "problem_summary": "Given circular gas stations with gas[i] available and cost[i] to travel to the next station, find the unique starting index from which a car with unlimited tank capacity can complete the full circuit, or return -1 if impossible.",
+          "pattern": [
+            "Greedy",
+            "Prefix sum / running total"
+          ],
+          "core_idea": [
+            "If total gas >= total cost, a valid starting point is guaranteed to exist (and is unique).",
+            "Track a running tank balance while scanning left to right; whenever it goes negative, no station in the range since the last reset could have been a valid start, so reset the candidate start to the next index and reset the tank to 0.",
+            "The final surviving start index after one pass is the answer when total gas >= total cost."
+          ],
+          "invariant": [
+            "current_gas represents the net gas balance accumulated since the last candidate start index.",
+            "Once current_gas goes negative at index i, none of the stations between the previous start and i can reach past i, so they're all eliminated as candidates.",
+            "total_gas - total_cost equals the tank balance at the end of a full circuit starting from index 0."
+          ],
+          "trap": [
+            "Forgetting to check total_gas < total_cost first — without it you might return a start index that actually can't complete the loop.",
+            "Resetting current_gas to 0 but forgetting to also update start = i + 1 (or vice versa) when the tank goes negative.",
+            "Assuming you need to re-simulate from each candidate start (O(n^2)) instead of realizing a single pass suffices.",
+            "Off-by-one on the wrap-around when validating the answer manually (circuit goes i -> i+1 ... back to start)."
+          ],
+          "recognition_clue": [
+            "Circular route / wrap-around array structure.",
+            "Problem guarantees a unique answer if one exists, hinting a single greedy pass can find it.",
+            "Asks for feasibility of traversing a cycle under a running balance constraint (gas - cost), suggesting prefix-sum/greedy reasoning rather than brute force simulation."
+          ],
+          "complexity_time": "O(n)",
+          "complexity_space": "O(1)",
+          "takeaway": [
+            "When a running sum starting from a fixed point goes negative, every point since the last reset is disqualified as a valid start — this lets a single linear scan find the unique feasible starting index instead of testing each candidate separately."
+          ]
+        }
+      }
     ]
   }
 }

@@ -13,6 +13,7 @@ from modules.render.markdown_notes import LeetCodeDSAProblemNotesRender, Prefill
 from modules.render.utils import FileVariant, NotesStyle
 
 from .common import CircuitBreaker, get_manager, print_batch_summary
+from .picker import label_records, pick_slugs
 from .root import cli
 
 logger = structlog.get_logger(__name__)
@@ -68,11 +69,13 @@ def notes_render(
     output_base: Path | None,
     force: bool,
 ) -> None:
-    """Render a stored question into a study-notes file (frontmatter + problem link only, for now)."""
+    """Render a stored question into a study-notes file (frontmatter + problem link only, for now).
+
+    Omit both SLUG and --all to pick interactively instead — a searchable,
+    multi-select prompt over every slug with problem data populated.
+    """
     if slug and run_all:
         raise click.UsageError("Pass either SLUG or --all, not both.")
-    if not slug and not run_all:
-        raise click.UsageError("Pass either SLUG or --all.")
 
     mgr = get_manager()
     renderer = LeetCodeDSAProblemNotesRender(
@@ -107,6 +110,17 @@ def notes_render(
         return
 
     records = [r for r in mgr.storage.list_all_combined() if r.raw_question_html]
+
+    if not run_all:
+        if not records:
+            click.echo("Nothing to pick from — no slugs have problem data populated yet.")
+            return
+        picked = pick_slugs(label_records(records))
+        if not picked:
+            click.echo("Nothing selected.")
+            return
+        records = [r for r in records if r.slug in picked]
+
     if not records:
         logger.info(
             "notes_command_batch_completed",
@@ -198,11 +212,12 @@ def notes_prefill(
     Code's `claude -p` by default — see modules/ai_prefill/providers). Every
     generation is appended to that slug's version history rather than
     overwriting a previous attempt.
+
+    Omit both SLUG and --all to pick interactively instead — a searchable,
+    multi-select prompt over every slug with problem data populated.
     """
     if slug and run_all:
         raise click.UsageError("Pass either SLUG or --all, not both.")
-    if not slug and not run_all:
-        raise click.UsageError("Pass either SLUG or --all.")
 
     mgr = get_manager()
     generator = AIPrefillGenerator()
@@ -234,8 +249,20 @@ def notes_prefill(
         return
 
     records = [r for r in mgr.storage.list_all_combined() if r.raw_question_html]
-    if limit:
-        records = records[:limit]
+
+    if run_all:
+        if limit:
+            records = records[:limit]
+    else:
+        if not records:
+            click.echo("Nothing to pick from — no slugs have problem data populated yet.")
+            return
+        picked = pick_slugs(label_records(records))
+        if not picked:
+            click.echo("Nothing selected.")
+            return
+        records = [r for r in records if r.slug in picked]
+
     if not records:
         logger.info("prefill_command_batch_completed", reason="no_problem_data_stored")
         click.echo("Nothing to do — no slugs have problem data populated yet.")

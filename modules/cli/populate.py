@@ -6,6 +6,7 @@ import structlog
 from modules.leetcode.pipeline import LeetCodeSyncManager
 
 from .common import BatchPacer, CircuitBreaker, get_manager, print_batch_summary
+from .picker import label_slugs, pick_slugs
 from .root import cli
 
 logger = structlog.get_logger(__name__)
@@ -111,14 +112,32 @@ def _resolve_any_pending_slugs(mgr: LeetCodeSyncManager, no_cache: bool) -> list
 def _validate_target(
     slug: str | None, run_all: bool, no_cache: bool, limit: int | None = None
 ) -> None:
+    """Neither SLUG nor --all is valid — it means "pick interactively" (see _pick_target_slugs)."""
     if slug and run_all:
         raise click.UsageError("Pass either SLUG or --all, not both.")
-    if not slug and not run_all:
-        raise click.UsageError("Pass either SLUG or --all.")
     if no_cache and not run_all:
         raise click.UsageError("--no-cache only applies with --all.")
     if limit is not None and not run_all:
         raise click.UsageError("--limit only applies with --all.")
+
+
+def _pick_target_slugs(mgr: LeetCodeSyncManager, candidates: list[str]) -> list[str]:
+    """
+    Interactive fallback for when neither SLUG nor --all was given: a
+    searchable multi-select over `candidates`, labeled with title/difficulty
+    wherever a problem record already exists (falls back to the bare slug
+    otherwise — e.g. a solved-but-not-yet-fetched slug from the pending
+    cache, which has no title yet). Returns [] (having already told the
+    user why) if there's nothing to pick from or nothing was selected.
+    """
+    if not candidates:
+        click.echo("Nothing to pick from — no slugs pending.")
+        return []
+    known = {r.slug: r for r in mgr.storage.list_all() if r.slug}
+    picked = pick_slugs(label_slugs(candidates, known))
+    if not picked:
+        click.echo("Nothing selected.")
+    return picked
 
 
 def _apply_limit(stage: str, slugs: list[str], limit: int | None) -> list[str]:
@@ -135,7 +154,8 @@ def _target_options(f):
     f = click.argument("slug", required=False)(f)
     f = click.option(
         "--all", "run_all", is_flag=True,
-        help="Run against every slug still pending this part in the cache.",
+        help="Run against every slug still pending this part in the cache. "
+        "Omit both SLUG and --all to pick interactively instead.",
     )(f)
     f = click.option(
         "--no-cache", "no_cache", is_flag=True,
@@ -205,11 +225,16 @@ def _run_part_command(
             raise click.ClickException(f"could not populate '{part_name}' for '{slug}' — no data returned")
         return
 
-    slugs = _apply_limit(part_name, _resolve_part_batch_slugs(mgr, part_name, no_cache), limit)
-    if not slugs:
-        logger.info("populate_command_batch_completed", stage=part_name, reason="no_slugs_pending")
-        click.echo("Nothing to do — no slugs pending.")
-        return
+    if run_all:
+        slugs = _apply_limit(part_name, _resolve_part_batch_slugs(mgr, part_name, no_cache), limit)
+        if not slugs:
+            logger.info("populate_command_batch_completed", stage=part_name, reason="no_slugs_pending")
+            click.echo("Nothing to do — no slugs pending.")
+            return
+    else:
+        slugs = _pick_target_slugs(mgr, _resolve_part_batch_slugs(mgr, part_name, no_cache))
+        if not slugs:
+            return
 
     logger.info("populate_command_batch_started", stage=part_name, slug_count=len(slugs))
     succeeded, skipped, failed = [], [], []
@@ -291,11 +316,16 @@ def populate_all(
             raise click.ClickException(f"'{slug}' failed part(s): {', '.join(failed_parts)}")
         return
 
-    slugs = _apply_limit("all", _resolve_any_pending_slugs(mgr, no_cache), limit)
-    if not slugs:
-        logger.info("populate_all_command_completed", reason="no_slugs_pending")
-        click.echo("Nothing to do — no slugs pending.")
-        return
+    if run_all:
+        slugs = _apply_limit("all", _resolve_any_pending_slugs(mgr, no_cache), limit)
+        if not slugs:
+            logger.info("populate_all_command_completed", reason="no_slugs_pending")
+            click.echo("Nothing to do — no slugs pending.")
+            return
+    else:
+        slugs = _pick_target_slugs(mgr, _resolve_any_pending_slugs(mgr, no_cache))
+        if not slugs:
+            return
 
     logger.info("populate_all_command_started", slug_count=len(slugs))
     succeeded, failed = [], []
