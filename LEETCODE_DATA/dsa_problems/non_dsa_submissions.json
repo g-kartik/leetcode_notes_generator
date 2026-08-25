@@ -1,0 +1,310 @@
+{
+  "submissions": {
+    "department-highest-salary": {
+      "slug": "department-highest-salary",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nSELECT \n    d.name AS Department\n\t,e.name AS Employee\n\t,max_salary AS Salary\nFROM Department d JOIN (\n     Employee e JOIN (\n        SELECT\n            departmentId\n            ,max(salary) AS max_salary\n        FROM Employee\n        GROUP BY departmentId\n    ) AS mx ON e.departmentId = mx.departmentId AND e.salary = mx.max_salary\n) ON d.id = e.departmentId",
+      "submission_date": "2026-06-05T03:59:46Z"
+    },
+    "triangle-judgement": {
+      "slug": "triangle-judgement",
+      "lang": "postgresql",
+      "code": "SELECT x,y,z\n\t,CASE \n\t\tWHEN x < (x + y + z) / 2.0\n\t\t\tAND y < (x + y + z) / 2.0\n\t\t\tAND z < (x + y + z) / 2.0\n\t\t\tTHEN 'Yes'\n\t\tELSE 'No'\n\t\tEND AS triangle\nFROM Triangle",
+      "submission_date": "2026-05-30T06:16:33Z"
+    },
+    "employees-whose-manager-left-the-company": {
+      "slug": "employees-whose-manager-left-the-company",
+      "lang": "postgresql",
+      "code": "-- SELECT\n--     m.employee_id\n-- FROM Employees AS m\n-- LEFT JOIN Employees AS e\n--     ON m.manager_id = e.employee_id\n-- WHERE\n--     e.employee_id IS NULL\n--     AND m.manager_id IS NOT NULL\n--     AND m.salary < 30000\n-- ORDER BY\n--     m.employee_id;\n\n\nSELECT employee_id\nFROM Employees\nWHERE salary < 30000\nAND manager_id NOT IN (\n  SELECT employee_id FROM Employees\n)\nORDER BY employee_id;\n",
+      "submission_date": "2026-06-06T04:42:20Z"
+    },
+    "last-person-to-fit-in-the-bus": {
+      "slug": "last-person-to-fit-in-the-bus",
+      "lang": "postgresql",
+      "code": "-- SELECT person_name\n-- FROM (\n-- \tSELECT person_name\n-- \t\t,SUM(weight) OVER (\n-- \t\t\tORDER BY turn\n-- \t\t\t) AS total_weight\n-- \tFROM QUEUE\n-- \t)\n-- WHERE total_weight <= 1000\n-- ORDER BY total_weight DESC limit 1\n\nSELECT person_name\nFROM QUEUE\nWHERE turn = (\n\t\tSELECT q1.turn\n\t\tFROM QUEUE q1\n\t\tLEFT JOIN QUEUE q2 ON q1.turn >= q2.turn\n\t\tGROUP BY q1.turn\n\t\tHAVING sum(q2.weight) <= 1000\n\t\tORDER BY sum(q2.weight) DESC limit 1\n\t\t)",
+      "submission_date": "2026-06-01T06:41:31Z"
+    },
+    "invalid-tweets": {
+      "slug": "invalid-tweets",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect tweet_id from Tweets where LENGTH(content)>15;",
+      "submission_date": "2026-05-16T03:21:27Z"
+    },
+    "replace-employee-id-with-the-unique-identifier": {
+      "slug": "replace-employee-id-with-the-unique-identifier",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect \"unique_id\", \"name\" from Employees as emp left join EmployeeUNI as empuni on emp.id=empuni.id",
+      "submission_date": "2026-05-17T03:56:20Z"
+    },
+    "customers-who-bought-all-products": {
+      "slug": "customers-who-bought-all-products",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nSELECT customer_id\nFROM Customer\nGROUP BY customer_id\nHAVING count(DISTINCT (product_key)) = (SELECT count(*) FROM Product)\n",
+      "submission_date": "2026-05-29T03:25:14Z"
+    },
+    "movie-rating": {
+      "slug": "movie-rating",
+      "lang": "postgresql",
+      "code": "(\n    WITH cte AS (\n        SELECT\n            user_id,\n            COUNT(*) AS rating\n        FROM MovieRating\n        GROUP BY user_id\n    )\n    SELECT\n        name AS results\n    FROM cte\n    LEFT JOIN Users\n        ON cte.user_id = Users.user_id\n    WHERE rating = (\n        SELECT MAX(rating)\n        FROM cte\n    )\n    ORDER BY name\n    LIMIT 1\n)\n\nUNION ALL\n\n(\n    WITH c AS (\n        SELECT\n            movie_id,\n            AVG(rating) AS avg\n        FROM MovieRating\n        WHERE EXTRACT(YEAR FROM created_at) = 2020\n          AND EXTRACT(MONTH FROM created_at) = 2\n        GROUP BY movie_id\n    )\n    SELECT\n        title AS results\n    FROM c\n    LEFT JOIN Movies m\n        ON c.movie_id = m.movie_id\n    WHERE avg = (\n        SELECT MAX(avg)\n        FROM c\n    )\n    ORDER BY title\n    LIMIT 1\n);",
+      "submission_date": "2026-06-07T05:20:18Z"
+    },
+    "confirmation-rate": {
+      "slug": "confirmation-rate",
+      "lang": "mysql",
+      "code": "# Write your MySQL query statement below\n\nselect S.user_id, coalesce(round((Confirmed.confirmed/Total.total), 2), 0) as confirmation_rate\nfrom Signups as S\nleft join (\n    select user_id, count(user_id) as total\n    from Confirmations as C group by user_id\n) as Total\n    on S.user_id = Total.user_id\nleft join (\n    select user_id, count(action) as confirmed\n    from Confirmations as C group by user_id, action having action='confirmed'\n) as Confirmed\n    on S.user_id = Confirmed.user_id\n\n\n\n\n",
+      "submission_date": "2026-05-21T05:20:38Z"
+    },
+    "queries-quality-and-percentage": {
+      "slug": "queries-quality-and-percentage",
+      "lang": "mysql",
+      "code": "SELECT Q.query_name\n\t,round(sum(rating / position) / count(Q.query_name), 2) AS quality\n\t,IFNULL(round(sub.poor * 100.0 / count(Q.query_name), 2), 0) AS poor_query_percentage\nFROM Queries Q\nLEFT JOIN (\n\tSELECT query_name\n\t\t,count(*) AS poor\n\tFROM Queries\n\tWHERE rating < 3\n\tGROUP BY query_name\n\t) AS sub ON sub.query_name = Q.query_name\nGROUP BY Q.query_name",
+      "submission_date": "2026-05-23T09:08:02Z"
+    },
+    "product-price-at-a-given-date": {
+      "slug": "product-price-at-a-given-date",
+      "lang": "postgresql",
+      "code": "-- SELECT F.product_id\n-- \t,coalesce(price, 10) AS price\n-- FROM (\n-- \tSELECT DISTINCT product_id\n-- \tFROM Products\n-- \t) F\n-- LEFT JOIN (\n-- \tSELECT P.product_id\n-- \t\t,new_price AS price\n-- \tFROM Products P\n-- \tJOIN (\n-- \t\tSELECT product_id\n-- \t\t\t,max(change_date) AS most_recent_date\n-- \t\tFROM Products\n-- \t\tWHERE change_date <= make_date(2019, 8, 16)\n-- \t\tGROUP BY product_id\n-- \t\t) AS R ON P.product_id = R.product_id\n-- \t\tAND P.change_date = R.most_recent_date\n-- \t) AS Res ON F.product_id = Res.product_id\n\n\n\nSELECT Ids.product_id\n\t,coalesce(Res.new_price, 10) AS price\nFROM\n\t(\n\t\tSELECT DISTINCT product_id\n\t\tFROM Products\n\t\t) AS Ids LEFT JOIN (\n\t\tSELECT DISTINCT ON (product_id)\n            product_id\n\t\t\t,new_price\n\t\tFROM Products\n\t\tWHERE change_date <= make_date(2019, 8, 16)\n\t\tORDER BY\n            product_id\n\t\t\t,change_date DESC\n\t\t) AS Res ON Ids.product_id = Res.product_id",
+      "submission_date": "2026-05-31T04:35:10Z"
+    },
+    "find-users-with-valid-e-mails": {
+      "slug": "find-users-with-valid-e-mails",
+      "lang": "postgresql",
+      "code": "SELECT *\nFROM Users\nWHERE mail ~ '^[A-Za-z][\\w.-]*@leetcode\\.com$';",
+      "submission_date": "2026-06-13T03:03:41Z"
+    },
+    "restaurant-growth": {
+      "slug": "restaurant-growth",
+      "lang": "postgresql",
+      "code": "-- d.visited_on+6 as visited_on, sum(amount) as amount, round(avg(amount), 2) as average_amount\nSELECT\n    d.visited_on+6 as visited_on,\n    SUM(c.amount) AS amount,\n    ROUND(SUM(c.amount) / 7.0, 2) AS average_amount\nFROM (\n    SELECT DISTINCT visited_on\n    FROM Customer\n) AS d\nJOIN Customer c\n    ON c.visited_on BETWEEN d.visited_on AND d.visited_on + 6\nWHERE d.visited_on + 6 <= (\n    SELECT MAX(visited_on)\n    FROM Customer\n)\nGROUP BY d.visited_on\nORDER BY d.visited_on;",
+      "submission_date": "2026-06-08T06:30:44Z"
+    },
+    "user-activity-for-the-past-30-days-i": {
+      "slug": "user-activity-for-the-past-30-days-i",
+      "lang": "postgresql",
+      "code": "SELECT\n    activity_date AS day\n\t,count(DISTINCT (user_id)) AS active_users\nFROM Activity\nWHERE activity_date BETWEEN make_date(2019,7,27) -29 AND make_date(2019,7,27)\nGROUP BY activity_date;",
+      "submission_date": "2026-05-27T03:59:09Z"
+    },
+    "employee-bonus": {
+      "slug": "employee-bonus",
+      "lang": "mysql",
+      "code": "# Write your MySQL query statement below\nselect name, bonus from Employee E left join Bonus B on E.empId=B.empId\nwhere B.bonus < 1000 or B.empId is null;",
+      "submission_date": "2026-05-20T02:47:55Z"
+    },
+    "classes-with-at-least-5-students": {
+      "slug": "classes-with-at-least-5-students",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\n-- SELECT class\n-- FROM (\n-- \tSELECT class\n-- \t\t,count(*) AS students\n-- \tFROM Courses\n-- \tGROUP BY class\n-- \t) AS S\n-- WHERE students >= 5;\n\nselect\n    class\nfrom\n    Courses\ngroup by\n    class\nhaving\n    count(student) >= 5;",
+      "submission_date": "2026-05-28T04:30:06Z"
+    },
+    "product-sales-analysis-iii": {
+      "slug": "product-sales-analysis-iii",
+      "lang": "postgresql",
+      "code": "-- SELECT\n--     FY.product_id\n-- \t,first_year\n-- \t,quantity\n-- \t,price\n-- FROM (\n-- \tSELECT DISTINCT ON (product_id)\n--         product_id\n-- \t\t,year AS first_year\n-- \tFROM Sales\n-- \tORDER BY product_id, year\n-- \t) AS FY\n-- LEFT JOIN Sales S ON\n--     FY.product_id = S.product_id\n-- \tAND FY.first_year = S.year\n\nSELECT\n    product_id\n\t,year as first_year\n\t,quantity\n\t,price\nFROM Sales where (product_id, year) in (\n\tSELECT DISTINCT ON (product_id)\n        product_id\n\t\t,year\n\tFROM Sales\n\tORDER BY product_id, year\n\t)",
+      "submission_date": "2026-05-28T04:15:23Z"
+    },
+    "department-top-three-salaries": {
+      "slug": "department-top-three-salaries",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\n\nSELECT\n    dept_name AS \"Department\",\n    emp_name AS \"Employee\",\n    salary AS \"Salary\"\nFROM (\n    SELECT\n        dept_name,\n        emp_name,\n        salary,\n        DENSE_RANK() OVER (\n            PARTITION BY dept_name\n            ORDER BY salary DESC\n        ) AS salary_rank\n    FROM (\n        SELECT\n            d.name AS dept_name,\n            e.name AS emp_name,\n            salary\n        FROM Employee e\n        LEFT JOIN Department d\n            ON e.departmentId = d.id\n    )\n)\nWHERE salary_rank <= 3;",
+      "submission_date": "2026-06-11T04:10:30Z"
+    },
+    "average-time-of-process-per-machine": {
+      "slug": "average-time-of-process-per-machine",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nSELECT\n    machine_id,\n    ROUND(AVG(process_time)::numeric, 3) as processing_time\nFROM (\n    SELECT\n        s.machine_id,\n        s.process_id,\n        (e.timestamp - s.timestamp) as process_time\n    FROM\n        Activity as s, Activity as e\n    WHERE\n        s.activity_type = 'start' and\n        e.activity_type = 'end' and\n        s.process_id = e.process_id and\n        s.machine_id = e.machine_id\n)\nGROUP BY machine_id\n",
+      "submission_date": "2026-05-19T04:04:38Z"
+    },
+    "average-selling-price": {
+      "slug": "average-selling-price",
+      "lang": "mysql",
+      "code": "# Write your MySQL query statement below\n\nselect P.product_id, IFNULL(round(sum(P.price*US.units)/sum(US.units), 2), 0) as average_price from Prices P left join UnitsSold US\non P.product_id=US.product_id AND US.purchase_date between P.start_date and P.end_date\ngroup by P.product_id\n-- SELECT \n--     Ids.product_id,\n-- \tcoalesce(Calc.average_price, 0) as average_price\n-- FROM (\n-- \tSELECT DISTINCT (product_id)\n-- \tFROM Prices\n-- \t) AS Ids\n-- LEFT JOIN (\n-- \tSELECT US.product_id\n-- \t\t,round(sum(US.units * P.price)/sum(US.units), 2) AS average_price\n-- \tFROM UnitsSold US\n-- \tLEFT JOIN Prices P ON US.product_id = P.product_id\n-- \t\tAND US.purchase_date >= P.start_date\n-- \t\tAND US.purchase_date <= P.end_date\n-- \tGROUP BY US.product_id\n-- \t) AS Calc ON Ids.product_id = Calc.product_id\n\n-- select\n-- US.product_id,\n-- sum(coalesce(US.units, 0)* P.price) as sold_price,\n-- sum(coalesce(US.units, 0)) as total_units\n-- from Prices P cross join UnitsSold US\n-- where \n--     (US.product_id=P.product_id or US.product_id is null) and US.purchase_date >= P.start_date and US.purchase_date <= P.end_date group by P.product_id",
+      "submission_date": "2026-05-23T06:53:45Z"
+    },
+    "project-employees-i": {
+      "slug": "project-employees-i",
+      "lang": "mysql",
+      "code": "\nSELECT\n    P.project_id\n\t,round(sum(E.experience_years) / count(E.employee_id), 2) AS average_years\nFROM Project P\nLEFT JOIN Employee E ON P.employee_id = E.employee_id\nGROUP BY P.project_id",
+      "submission_date": "2026-05-23T07:07:37Z"
+    },
+    "recyclable-and-low-fat-products": {
+      "slug": "recyclable-and-low-fat-products",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect product_id from Products where low_fats='Y' and recyclable='Y';",
+      "submission_date": "2026-05-16T03:00:10Z"
+    },
+    "monthly-transactions-i": {
+      "slug": "monthly-transactions-i",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nSELECT\n    to_char(DATE_TRUNC('month', trans_date), 'YYYY-mm') AS month\n\t,country\n\t,count(*) AS trans_count\n    ,count(*) FILTER (where state='approved') as approved_count\n\t,sum(amount) AS trans_total_amount\n    ,COALESCE(sum(amount) FILTER (where state='approved'), 0) as approved_total_amount\nFROM Transactions\nGROUP BY\n    DATE_TRUNC('month', trans_date)\n\t,country",
+      "submission_date": "2026-05-25T03:03:00Z"
+    },
+    "fix-names-in-a-table": {
+      "slug": "fix-names-in-a-table",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect user_id, upper(substring(name from 1 for 1)) || lower(substring(name from 2 for length(name))) as name from Users order by user_id",
+      "submission_date": "2026-06-12T03:40:09Z"
+    },
+    "big-countries": {
+      "slug": "big-countries",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect \"name\", \"population\", \"area\" from World where \"area\" >= 3000000 or \"population\" >= 25000000;",
+      "submission_date": "2026-05-16T03:10:10Z"
+    },
+    "count-salary-categories": {
+      "slug": "count-salary-categories",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect c.category, COALESCE(accounts_count, 0) as accounts_count from (\n    VALUES\n        ('Low Salary'),\n        ('Average Salary'),\n        ('High Salary')\n) as c(category) LEFT JOIN (\n    select\n        case\n            when income < 20000 then 'Low Salary'\n            when income between 20000 and 50000 then 'Average Salary'\n            else 'High Salary'\n        end as category,\n        count(*) as accounts_count\n    from Accounts group by category\n) as a ON c.category=a.category ",
+      "submission_date": "2026-06-04T03:08:30Z"
+    },
+    "managers-with-at-least-5-direct-reports": {
+      "slug": "managers-with-at-least-5-direct-reports",
+      "lang": "mysql",
+      "code": "# Write your MySQL query statement below\n-- select C.name from (\n-- select name, count(managerId)as contacts from Employee group by name, managerId\n-- ) as C where C.contacts >= 5;\n\nselect name from Employee as E left join (\n    select managerId, count(managerId) as contacts from Employee group by managerId\n) as C on E.id = C.managerId where C.contacts >= 5;\n",
+      "submission_date": "2026-05-21T04:42:09Z"
+    },
+    "number-of-unique-subjects-taught-by-each-teacher": {
+      "slug": "number-of-unique-subjects-taught-by-each-teacher",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect teacher_id, count(distinct(subject_id)) as cnt from Teacher group by teacher_id;",
+      "submission_date": "2026-05-27T02:55:25Z"
+    },
+    "immediate-food-delivery-ii": {
+      "slug": "immediate-food-delivery-ii",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\n-- SELECT round(\n--         count(*) filter(WHERE FO.first_order_date = D.customer_pref_delivery_date) * 100.0 / count(*)\n--     , 2) AS immediate_percentage\n-- FROM (\n-- \tSELECT customer_id\n-- \t\t,min(order_date) AS first_order_date\n-- \tFROM Delivery\n-- \tGROUP BY customer_id\n-- \t) AS FO\n-- LEFT JOIN Delivery D ON FO.customer_id = D.customer_id\n-- \tAND FO.first_order_date = D.order_date\n\nSELECT round(\n    count(*) FILTER(WHERE FO.order_date = FO.customer_pref_delivery_date) * 100.0 / count(*)\n, 2) AS immediate_percentage\nFROM (\n\tSELECT DISTINCT ON (customer_id)\n        customer_id\n\t\t,order_date\n\t\t,customer_pref_delivery_date\n\tFROM Delivery\n\tORDER BY customer_id\n\t\t,order_date\n\t) AS FO",
+      "submission_date": "2026-05-26T03:52:12Z"
+    },
+    "article-views-i": {
+      "slug": "article-views-i",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect distinct author_id as id from Views where author_id=viewer_id order by id;",
+      "submission_date": "2026-05-16T03:17:08Z"
+    },
+    "investments-in-2016": {
+      "slug": "investments-in-2016",
+      "lang": "postgresql",
+      "code": "WITH\n  InsuranceWithCounts AS (\n    SELECT\n      tiv_2016,\n      COUNT(*) OVER(PARTITION by tiv_2015) AS tiv_2015_count,\n      COUNT(*) OVER(PARTITION by lat, lon) AS city_count\n    FROM Insurance\n  )\nSELECT ROUND(SUM(tiv_2016)::DECIMAL, 2) AS tiv_2016\nFROM InsuranceWithCounts\nWHERE tiv_2015_count > 1\n  AND city_count = 1;",
+      "submission_date": "2026-06-10T06:05:15Z"
+    },
+    "game-play-analysis-iv": {
+      "slug": "game-play-analysis-iv",
+      "lang": "postgresql",
+      "code": "-- round(count(*)::Decimal / (select count(distinct(player_id)) from Activity), 2) as fraction\n\nSELECT  round(count(*)::Decimal / (select count(distinct(player_id)) from Activity), 2) as fraction\nFROM (\n\tSELECT DISTINCT ON (player_id)\n        player_id\n\t\t,event_date\n\tFROM Activity\n\tORDER BY\n        player_id\n\t\t,event_date\n\t) AS LD\n JOIN Activity A ON LD.player_id = A.player_id\n\tAND A.event_date - LD.event_date = 1",
+      "submission_date": "2026-05-26T04:52:47Z"
+    },
+    "exchange-seats": {
+      "slug": "exchange-seats",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect o.id, COALESCE(e.student, (select student from Seat where id=o.id)) as student from (select id from Seat s1 where s1.id%2=1) o LEFT JOIN (select * from Seat s2 where id%2=0) e ON o.id+1=e.id \n\nunion\n\nselect e.id, o.student from (select id from Seat s1 where s1.id%2=0) e LEFT JOIN (select * from Seat s2 where id%2=1) o ON e.id-1=o.id \n\n",
+      "submission_date": "2026-06-06T05:40:06Z"
+    },
+    "delete-duplicate-emails": {
+      "slug": "delete-duplicate-emails",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\n\nDELETE FROM Person\nWHERE id NOT IN (\n    SELECT DISTINCT ON (email)\n        id\n    FROM Person\n    ORDER BY email, id\n);",
+      "submission_date": "2026-06-12T04:34:46Z"
+    },
+    "customer-who-visited-but-did-not-make-any-transactions": {
+      "slug": "customer-who-visited-but-did-not-make-any-transactions",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect customer_id, COUNT(*) as count_no_trans from \nVisits as V left join Transactions as T on V.visit_id=T.visit_id \nwhere T.visit_id is null group by customer_id;",
+      "submission_date": "2026-05-17T04:56:37Z"
+    },
+    "find-followers-count": {
+      "slug": "find-followers-count",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect user_id, count(*) as followers_count from Followers group by user_id order by user_id;",
+      "submission_date": "2026-05-29T02:56:36Z"
+    },
+    "the-number-of-employees-which-report-to-each-employee": {
+      "slug": "the-number-of-employees-which-report-to-each-employee",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\n\nSELECT employee_id\n\t,name\n\t,cnt AS reports_count\n\t,avg_age AS average_age\nFROM Employees E\nJOIN (\n\tSELECT reports_to as manager_id\n\t\t,count(*) AS cnt\n\t\t,round(AVG(age)) AS avg_age\n\tFROM Employees\n\tGROUP BY reports_to\n\tHAVING count(*) >= 1\n\t) AS M ON E.employee_id = M.manager_id\nORDER BY employee_id\n",
+      "submission_date": "2026-05-29T03:58:33Z"
+    },
+    "students-and-examinations": {
+      "slug": "students-and-examinations",
+      "lang": "mysql",
+      "code": "# Write your MySQL query statement below\nselect s.student_id,\n        s.student_name,\n        sub.subject_name,\n        Count(e.student_id) as attended_exams\nfrom Students as s\n    cross join Subjects as sub\n    left join Examinations as e\n    on\n        s.student_id = e.student_id and\n        sub.subject_name = e.subject_name\ngroup by\n        s.student_id, s.student_name, sub.subject_name\norder by\n        s.student_id, s.student_name, sub.subject_name",
+      "submission_date": "2026-05-21T04:19:02Z"
+    },
+    "not-boring-movies": {
+      "slug": "not-boring-movies",
+      "lang": "mysql",
+      "code": "# Write your MySQL query statement below\nselect * from Cinema where id%2=1 and description!='boring' order by rating desc;",
+      "submission_date": "2026-05-22T02:55:05Z"
+    },
+    "percentage-of-users-attended-a-contest": {
+      "slug": "percentage-of-users-attended-a-contest",
+      "lang": "postgresql",
+      "code": "-- Write your MySQL query statement below\nselect r.contest_id, round((count(r.user_id)*100.0/(select count(*) from Users)), 2) as percentage from Register r\ngroup by r.contest_id\norder by percentage desc, r.contest_id",
+      "submission_date": "2026-05-23T08:04:46Z"
+    },
+    "list-the-products-ordered-in-a-period": {
+      "slug": "list-the-products-ordered-in-a-period",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nSELECT\n    product_name,\n    SUM(unit) AS unit\nFROM (\n    SELECT\n        product_name,\n        unit\n    FROM Orders\n    LEFT JOIN Products USING (product_id)\n    WHERE DATE_PART('year', order_date) = 2020\n      AND DATE_PART('month', order_date) = 2\n)\nGROUP BY product_name\nHAVING SUM(unit) >= 100;",
+      "submission_date": "2026-06-13T02:41:56Z"
+    },
+    "group-sold-products-by-the-date": {
+      "slug": "group-sold-products-by-the-date",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nSELECT\n    sell_date,\n    COUNT(*) AS num_sold,\n    STRING_AGG(product, ',' ORDER BY product) AS products\nFROM (\n    SELECT DISTINCT\n        sell_date,\n        product\n    FROM Activities\n)\nGROUP BY sell_date\nORDER BY sell_date;\n\n",
+      "submission_date": "2026-06-13T02:25:36Z"
+    },
+    "rising-temperature": {
+      "slug": "rising-temperature",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\n-- select today.id from Weather today CROSS JOIN Weather yesterday\n-- where today.recordDate - yesterday.recordDate = 1 and\n-- today.temperature > yesterday.temperature;\n\n\n\n\n\n-- select w1.id from Weather w1\n-- where w1.temperature > (\n--     select w2.temperature from Weather w2\n--     where w2.recordDate = w1.recordDate - INTERVAL '1 DAY'\n-- )\n\nselect w1.id from Weather w1\nwhere w1.temperature > (\n    select w2.temperature from Weather w2\n    where w1.recordDate - w2.recordDate = 1\n)\n",
+      "submission_date": "2026-05-19T03:07:31Z"
+    },
+    "consecutive-numbers": {
+      "slug": "consecutive-numbers",
+      "lang": "postgresql",
+      "code": "SELECT distinct l1.num as ConsecutiveNums\nFROM Logs l1\n\t,Logs l2\n\t,Logs l3\nWHERE l2.id = l1.id + 1\n\tAND l3.id = l2.id + 1\n\tAND l1.num = l2.num\n\tAND l2.num = l3.num",
+      "submission_date": "2026-05-31T02:59:03Z"
+    },
+    "patients-with-a-condition": {
+      "slug": "patients-with-a-condition",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\n\n-- SELECT\n--     patient_id,\n--     patient_name,\n--     conditions\n-- FROM Patients p\n-- CROSS JOIN LATERAL (\n--     SELECT unnest(string_to_array(p.conditions, ' ')) AS word\n-- )\n-- WHERE word LIKE 'DIAB1%';\n\nSELECT *\nFROM Patients\nWHERE conditions LIKE 'DIAB1%'\n   OR conditions LIKE '% DIAB1%';",
+      "submission_date": "2026-06-12T04:24:42Z"
+    },
+    "friend-requests-ii-who-has-the-most-friends": {
+      "slug": "friend-requests-ii-who-has-the-most-friends",
+      "lang": "postgresql",
+      "code": "SELECT\n    id,\n    SUM(friends) AS num\nFROM\n(\n    (\n        SELECT\n            requester_id AS id,\n            COUNT(*) AS friends\n        FROM RequestAccepted ra\n        GROUP BY requester_id\n    )\n\n    UNION ALL\n\n    (\n        SELECT\n            accepter_id AS id,\n            COUNT(*) AS friends\n        FROM RequestAccepted ra\n        GROUP BY accepter_id\n    )\n)\nGROUP BY id\nORDER BY num DESC\nFETCH FIRST 1 ROW WITH TIES;",
+      "submission_date": "2026-06-09T04:28:47Z"
+    },
+    "second-highest-salary": {
+      "slug": "second-highest-salary",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nSELECT (\n    SELECT DISTINCT (salary) AS salary\n    FROM Employee\n    ORDER BY salary DESC\n    LIMIT 1 OFFSET 1\n) AS \"SecondHighestSalary\";",
+      "submission_date": "2026-06-13T02:05:16Z"
+    },
+    "primary-department-for-each-employee": {
+      "slug": "primary-department-for-each-employee",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nSELECT\n    employee_id\n\t,department_id\nFROM Employee\nWHERE employee_id IN (\n\t\tSELECT employee_id\n\t\tFROM Employee\n\t\tGROUP BY employee_id\n\t\tHAVING count(*) = 1\n\t)\n\nUNION ALL\n\nSELECT employee_id\n\t,department_id\nFROM Employee\nWHERE primary_flag = 'Y';",
+      "submission_date": "2026-05-30T05:39:53Z"
+    },
+    "product-sales-analysis-i": {
+      "slug": "product-sales-analysis-i",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect \"product_name\", \"year\", \"price\" from Sales left join Product on Sales.product_id=Product.product_id;",
+      "submission_date": "2026-05-17T04:10:39Z"
+    },
+    "biggest-single-number": {
+      "slug": "biggest-single-number",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect max(num) as num from (\nselect num from MyNumbers group by num having count(*)=1\n)\n",
+      "submission_date": "2026-05-29T03:06:30Z"
+    },
+    "find-customer-referee": {
+      "slug": "find-customer-referee",
+      "lang": "postgresql",
+      "code": "-- Write your PostgreSQL query statement below\nselect name from Customer where referee_id!=2 or referee_id is null;",
+      "submission_date": "2026-05-16T03:03:32Z"
+    }
+  }
+}

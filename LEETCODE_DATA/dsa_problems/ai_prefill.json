@@ -191,6 +191,41 @@
             "Sortedness + a required sub-linear time bound is the classic signal to reach for binary search: use inclusive bounds (left <= right) and always move the excluded boundary past mid (mid+1/mid-1) to guarantee progress and correctness."
           ]
         }
+      },
+      {
+        "generated_at": "2026-08-25T22:00:25.659673",
+        "provider": "claude_code",
+        "content": {
+          "problem_summary": "Given a sorted (ascending) array of unique integers and a target value, find the index of the target in O(log n) time, or return -1 if it isn't present.",
+          "pattern": [
+            "Binary Search"
+          ],
+          "core_idea": [
+            "Repeatedly halve the search space by comparing the target to the middle element.",
+            "Because the array is sorted, the comparison at mid tells you which half can be discarded entirely.",
+            "Use inclusive bounds [left, right] and shrink them until they cross or the target is found."
+          ],
+          "invariant": [
+            "If the target exists in nums, it always lies within nums[left..right] at the start of each loop iteration.",
+            "left and right only move inward (left increases, right decreases), so the search space is strictly shrinking each iteration."
+          ],
+          "trap": [
+            "Using left + (right - left) // 2 instead of (left + right) // 2 avoids integer overflow in languages with fixed-width ints (less critical in Python but good habit).",
+            "Loop condition must be left <= right (not <), otherwise the case where left == right (single remaining candidate) is skipped.",
+            "Off-by-one errors when updating bounds: must set left = mid + 1 / right = mid - 1, not mid itself, or you risk an infinite loop.",
+            "Returning -1 only after the loop ends, not prematurely inside it."
+          ],
+          "recognition_clue": [
+            "Array is explicitly stated to be sorted in ascending order.",
+            "Requirement to achieve O(log n) runtime complexity.",
+            "All elements are unique, so there's exactly one valid index to find (no duplicate-handling complexity)."
+          ],
+          "complexity_time": "O(log n)",
+          "complexity_space": "O(1)",
+          "takeaway": [
+            "Whenever an array is sorted and you need faster-than-linear search, think binary search: use inclusive [left, right] bounds and eliminate half the space each step based on a comparison at mid."
+          ]
+        }
       }
     ],
     "gas-station": [
@@ -228,6 +263,46 @@
           "complexity_space": "O(1)",
           "takeaway": [
             "When a running sum starting from a fixed point goes negative, every point since the last reset is disqualified as a valid start — this lets a single linear scan find the unique feasible starting index instead of testing each candidate separately."
+          ]
+        }
+      }
+    ],
+    "car-fleet": [
+      {
+        "generated_at": "2026-08-25T21:56:27.022173",
+        "provider": "claude_code",
+        "content": {
+          "problem_summary": "Given cars at distinct positions moving toward a common target at given speeds, cars merge into a fleet when a faster car behind catches up to a slower one ahead (fleets travel at the slower speed and never separate). Count how many distinct fleets arrive at the target.",
+          "pattern": [
+            "Monotonic stack",
+            "Sorting"
+          ],
+          "core_idea": [
+            "Compute the time each car would take to reach target if unobstructed: (target - position) / speed.",
+            "Process cars from closest-to-target to farthest (sort by position descending).",
+            "A car forms a new fleet only if its arrival time is strictly greater than the max arrival time seen so far among cars ahead of it; otherwise it catches up and merges into the fleet ahead.",
+            "Track a running maximum of arrival times; each time a new max is found, increment the fleet count."
+          ],
+          "invariant": [
+            "Cars are processed in strictly decreasing order of starting position, so we always compare a car to fleets already 'ahead' of it.",
+            "max_time always holds the largest arrival time among all fleets formed so far (i.e., the slowest/last-arriving fleet encountered from the target backward).",
+            "A car with arrival time <= max_time can never separate from the fleet ahead since it would have to pass a slower car."
+          ],
+          "trap": [
+            "Sorting must be by position, not by speed or index — zip(position, speed) then sort handles this correctly.",
+            "Must iterate from the car closest to target backward (reverse after sorting by position ascending), not forward, since fleet formation depends on catching up to the car ahead.",
+            "A car catching up exactly at the target still counts as joining the fleet, so the comparison must be strict (time > max_time forms a new fleet, time <= max_time merges).",
+            "Single car input should still return 1 fleet — handled naturally since the first (farthest-from-target-in-reverse-order, i.e., closest) time is always > 0."
+          ],
+          "recognition_clue": [
+            "'Cannot pass another car but can catch up and travel together' implies merging based on relative arrival times.",
+            "Asking for count of groups arriving together at a fixed destination suggests comparing time-to-reach rather than raw positions/speeds.",
+            "Only one array of positions/speeds combined with a single target distance hints at a single pass after sorting."
+          ],
+          "complexity_time": "O(n log n)",
+          "complexity_space": "O(n)",
+          "takeaway": [
+            "When objects moving toward a common endpoint can merge but not pass each other, convert to arrival times and sweep from the endpoint backward, tracking a running maximum — a classic monotonic stack pattern in disguise."
           ]
         }
       }

@@ -23,7 +23,13 @@ class LeetCodeSettings(BaseProjectSettings):
 
     BASE_URL: str = "https://leetcode.com"
 
-    ENDPOINT_ALL_PROBLEMS: str = f"{BASE_URL}/api/problems/all/"
+    # 'algorithms' (not 'all') deliberately — /api/problems/all/ mixes in
+    # Database/Shell/Concurrency problems too, which this project doesn't
+    # store or render for now (any already-fetched ones were moved out to
+    # NON_DSA_PROBLEMS_JSON_DB below). Response shape (stat_status_pairs) is
+    # identical across every /api/problems/<category>/ endpoint, just
+    # pre-filtered server-side to that one category.
+    ENDPOINT_ALL_PROBLEMS: str = f"{BASE_URL}/api/problems/algorithms/"
 
     # Kept conservative on purpose — a large batch run (e.g. populating hundreds
     # of solved problems in one sitting) is exactly the traffic shape abuse
@@ -37,6 +43,14 @@ class LeetCodeSettings(BaseProjectSettings):
     DSA_SUBMISSIONS_JSON_DB: Path = PROBLEMS_DATA_DIR / "submissions.json"
     DSA_PROBLEMS_CACHE_JSON_DB: Path = PROBLEMS_DATA_DIR / "solved_slugs_cache.json"
     DSA_PROBLEMS_ASSETS_DIR: Path = PROBLEMS_DATA_DIR / "assets"
+
+    # Non-DSA (Database/Shell/Concurrency/...) problem + submission records
+    # that had already been fetched before ENDPOINT_ALL_PROBLEMS was scoped
+    # to 'algorithms' only. Plain data dump, not a managed store — no CRUD
+    # module reads/writes these on purpose, this project doesn't handle
+    # non-DSA problems yet.
+    NON_DSA_PROBLEMS_JSON_DB: Path = PROBLEMS_DATA_DIR / "non_dsa_problems.json"
+    NON_DSA_SUBMISSIONS_JSON_DB: Path = PROBLEMS_DATA_DIR / "non_dsa_submissions.json"
 
 
 leetcode_settings = LeetCodeSettings()
