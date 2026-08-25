@@ -19,7 +19,9 @@ _AI_STYLES = {NotesStyle.PLAIN_AI.value, NotesStyle.OBSIDIAN_AI.value}
 @cli.command()
 @click.argument("slug", required=False)
 @click.option(
-    "--all", "run_all", is_flag=True,
+    "--all",
+    "run_all",
+    is_flag=True,
     help="Render notes for every slug that already has problem data populated.",
 )
 @click.option(
@@ -37,8 +39,18 @@ _AI_STYLES = {NotesStyle.PLAIN_AI.value, NotesStyle.OBSIDIAN_AI.value}
     help="Which already-rendered problem file variant the note links to.",
 )
 @click.option(
-    "--output-base", "output_base", type=click.Path(path_type=Path), default=None,
+    "--output-base",
+    "output_base",
+    type=click.Path(path_type=Path),
+    default=None,
     help="Priority: this flag > OUTPUT_BASE_DIR (.env) > render_settings.DEFAULT_WRITE_DIR.",
+)
+@click.option(
+    "--force/--no-force",
+    default=False,
+    help="Regenerate even if a notes file already exists — the existing file "
+    "is backed up first (Leetcode Notes/backups/<id>-<slug>/), since it "
+    "may contain hand-written content.",
 )
 def notes(
     slug: str | None,
@@ -46,6 +58,7 @@ def notes(
     style: str,
     link_variant: str,
     output_base: Path | None,
+    force: bool,
 ) -> None:
     """Render a stored question into a study-notes file (frontmatter + problem link only, for now)."""
     if slug and run_all:
@@ -71,38 +84,57 @@ def notes(
             record = mgr.storage.get_combined_by_slug(slug)
             if record is None or not record.raw_question_html:
                 log.warning("notes_command_skipped", reason="no_problem_data_stored")
-                raise click.ClickException(f"no problem data found for '{slug}', run 'populate problem {slug}' first")
+                raise click.ClickException(
+                    f"no problem data found for '{slug}', run 'populate problem {slug}' first"
+                )
             log.info("notes_command_started")
-            renderer.save(record)
-            log.info("notes_command_succeeded")
-            click.echo(f"[done] notes({style}) {slug}")
+            _, status = renderer.save(record, force=force)
+            log.info("notes_command_succeeded", status=status)
+            label = "done" if status == "written" else "skip"
+            suffix = (
+                ""
+                if status == "written"
+                else " (already exists, use --force to regenerate)"
+            )
+            click.echo(f"[{label}] notes({style}) {slug}{suffix}")
         return
 
     records = [r for r in mgr.storage.list_all_combined() if r.raw_question_html]
     if not records:
-        logger.info("notes_command_batch_completed", stage="notes", reason="no_problem_data_stored")
+        logger.info(
+            "notes_command_batch_completed",
+            stage="notes",
+            reason="no_problem_data_stored",
+        )
         click.echo("Nothing to render — no slugs have problem data populated yet.")
         return
 
     logger.info("notes_command_batch_started", stage="notes", record_count=len(records))
-    succeeded, failed = [], []
+    succeeded, skipped, failed = [], [], []
     for record in records:
         with structlog.contextvars.bound_contextvars(slug=record.slug, stage="notes"):
             try:
-                renderer.save(record)
+                _, status = renderer.save(record, force=force)
             except Exception as exc:
                 logger.exception("notes_command_failed")
                 click.echo(f"[fail] {record.slug}: {exc}")
                 failed.append(record.slug)
             else:
-                logger.info("notes_command_succeeded")
-                click.echo(f"[done] {record.slug}")
-                succeeded.append(record.slug)
+                logger.info("notes_command_succeeded", status=status)
+                if status == "written":
+                    click.echo(f"[done] {record.slug}")
+                    succeeded.append(record.slug)
+                else:
+                    click.echo(
+                        f"[skip] {record.slug} (already exists, use --force to regenerate)"
+                    )
+                    skipped.append(record.slug)
 
     logger.info(
         "notes_command_batch_completed",
         stage="notes",
         succeeded_count=len(succeeded),
+        skipped_count=len(skipped),
         failed_count=len(failed),
     )
-    print_batch_summary(succeeded, failed)
+    print_batch_summary(succeeded, failed, skipped)

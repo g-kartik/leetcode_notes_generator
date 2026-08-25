@@ -1,4 +1,6 @@
 import os
+import shutil
+from datetime import datetime
 from pathlib import Path
 
 import structlog
@@ -7,11 +9,19 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from modules.leetcode.storage.combined import CombinedQuestionRecord
 
 from .settings import render_settings
-from .utils import FileVariant, NotesStyle, notes_root, problems_root, sanitized_filename
+from .utils import (
+    FileVariant,
+    NotesStyle,
+    notes_root,
+    problems_root,
+    sanitized_filename,
+)
 
 logger = structlog.get_logger(__name__)
 
 _AI_STYLES = {NotesStyle.PLAIN_AI, NotesStyle.OBSIDIAN_AI}
+
+_BACKUP_TIMESTAMP_FMT = "%Y-%m-%d-%H-%M-%S"
 
 _TEMPLATE_BY_STYLE = {
     NotesStyle.PLAIN: "leetcode_notes_plain.md.j2",
@@ -73,7 +83,9 @@ class LeetCodeDSAProblemNotesRender:
 
         self.output_base.mkdir(parents=True, exist_ok=True)
 
-    def _problem_file_path(self, record: CombinedQuestionRecord, variant: FileVariant) -> Path:
+    def _problem_file_path(
+        self, record: CombinedQuestionRecord, variant: FileVariant
+    ) -> Path:
         """Absolute path to this record's already-rendered problem/solution file, for one variant."""
         filename = sanitized_filename(record.id, record.title)
         root = problems_root(self.output_base)
@@ -85,8 +97,12 @@ class LeetCodeDSAProblemNotesRender:
 
     def _tags(self, record: CombinedQuestionRecord) -> list[str]:
         """Personal pattern tags + LeetCode question-tag slugs, deduped, in one list."""
-        question_tag_slugs = [t.get("slug") for t in (record.tags or []) if t.get("slug")]
-        return list(dict.fromkeys([*_EMPTY_PREFILL["pattern_tags"], *question_tag_slugs]))
+        question_tag_slugs = [
+            t.get("slug") for t in (record.tags or []) if t.get("slug")
+        ]
+        return list(
+            dict.fromkeys([*_EMPTY_PREFILL["pattern_tags"], *question_tag_slugs])
+        )
 
     def _warn_if_missing(self, path: Path, log) -> None:
         if not path.exists():
@@ -120,29 +136,82 @@ class LeetCodeDSAProblemNotesRender:
             local_file = self._problem_file_path(record, FileVariant.LOCAL)
             self._warn_if_missing(remote_file, log)
             self._warn_if_missing(local_file, log)
-            context["problem_remote_link"] = remote_file.relative_to(self.output_base).with_suffix("").as_posix()
-            context["problem_local_link"] = local_file.relative_to(self.output_base).with_suffix("").as_posix()
+            context["problem_remote_link"] = (
+                remote_file.relative_to(self.output_base).with_suffix("").as_posix()
+            )
+            context["problem_local_link"] = (
+                local_file.relative_to(self.output_base).with_suffix("").as_posix()
+            )
         else:
             problem_file = self._problem_file_path(record, self.link_variant)
             self._warn_if_missing(problem_file, log)
             context["problem_note_name"] = problem_file.stem
-            context["problem_note_relpath"] = os.path.relpath(problem_file, start=notes_dir)
+            context["problem_note_relpath"] = os.path.relpath(
+                problem_file, start=notes_dir
+            )
 
         rendered = self.template.render(**context)
         log.info("notes_rendered", style=self.style.value)
         return rendered
 
-    def save(self, record: CombinedQuestionRecord) -> Path:
+    def _backup_dir(self, record: CombinedQuestionRecord) -> Path:
+        """
+        <output_base>/Leetcode Notes/backups/<id>-<slug>/ — one subfolder per
+        problem, since repeated --force runs can accumulate multiple backups
+        and dumping every problem's backups into one shared folder would make
+        them hard to tell apart.
+        """
+        return (
+            notes_root(self.output_base)
+            / "backups"
+            / f"{record.id or 0:04d}-{record.slug}"
+        )
+
+    def _backup_existing_note(
+        self, output_file: Path, record: CombinedQuestionRecord, log
+    ) -> Path:
+        """Copies the current notes file into its per-problem backup folder, timestamped."""
+        backup_dir = self._backup_dir(record)
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime(_BACKUP_TIMESTAMP_FMT)
+        backup_file = backup_dir / f"{output_file.stem}-{timestamp}{output_file.suffix}"
+        shutil.copy2(output_file, backup_file)
+        log.info("notes_existing_backed_up", path=str(backup_file))
+        return backup_file
+
+    def save(
+        self, record: CombinedQuestionRecord, force: bool = False
+    ) -> tuple[Path, str]:
         """
         Renders and saves the (single, style-agnostic) notes file for `record`
         into <output_base>/Leetcode Notes/<file>.md. Re-running with a different
         --style overwrites this same file — there's one notes file per problem.
+
+        A notes file is meant to be hand-edited after generation (pattern, core
+        idea, invariant, trap, ...), so an existing file is never silently
+        overwritten: by default, this is a no-op if the file already exists.
+        Pass force=True to regenerate anyway — the existing file is copied into
+        its per-problem backup folder (timestamped) first, so nothing is lost.
+
+        Returns (path, status) where status is "written" or "skipped".
         """
         log = logger.bind(slug=record.slug)
         notes_dir = notes_root(self.output_base)
         notes_dir.mkdir(parents=True, exist_ok=True)
 
         output_file = notes_dir / sanitized_filename(record.id, record.title)
+
+        if output_file.exists():
+            if not force:
+                log.info(
+                    "notes_save_skipped",
+                    reason="notes_file_already_exists",
+                    path=str(output_file),
+                    hint="pass force=True (--force) to regenerate; the existing file is backed up first",
+                )
+                return output_file, "skipped"
+            self._backup_existing_note(output_file, record, log)
+
         output_file.write_text(self.render(record), encoding="utf-8")
         log.info("notes_file_written", style=self.style.value, path=str(output_file))
-        return output_file
+        return output_file, "written"
