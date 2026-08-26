@@ -56,7 +56,7 @@ flags) — and unlike that form, it works from any directory, not just this
 project's:
 
 ```
-leetnotes <TAB>                 # -> cache  db  notes  populate  recent  render  sync
-leetnotes notes <TAB>           # -> prefill  render
+leetnotes <TAB>                 # -> notes  problems  solve
+leetnotes problems <TAB>        # -> count  data  delete  list  recent  render  show
 leetnotes notes prefill --<TAB> # -> --all  --force  --limit  --max-failures  --rate-limit/--no-rate-limit
 ```

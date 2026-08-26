@@ -172,7 +172,7 @@ class LeetCodeDSAStorage:
     # -------------------------------------------------------------------
 
     def read_pending_cache(self) -> dict[str, dict[str, bool]]:
-        """Returns the full pending cache: {slug: {question, images, submission}}."""
+        """Returns the full pending cache: {slug: {description, images, submission}}."""
         return self.cache.read_pending_cache()
 
     def get_pending_slugs(self) -> list[str]:
@@ -194,7 +194,7 @@ class LeetCodeDSAStorage:
         """
         problem = self.problems.get_by_slug(slug)
         return {
-            "question": bool(problem and problem.raw_question_html),
+            "description": bool(problem and problem.raw_question_html),
             "images": bool(problem and problem.images_populated),
             "submission": self.submissions.exists(slug),
         }
@@ -244,7 +244,7 @@ class LeetCodeDSAStorage:
         return self.cache.is_part_pending(slug, part)
 
     def mark_part_fetched(self, slug: str, part: str) -> None:
-        """Marks `part` ('question' | 'images' | 'submission') as fetched for `slug`."""
+        """Marks `part` ('description' | 'images' | 'submission') as fetched for `slug`."""
         self.cache.mark_part_fetched(slug, part)
 
     def reopen_part(self, slug: str, part: str) -> None:

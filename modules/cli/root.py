@@ -1,5 +1,6 @@
 """Root `cli` click group. Every command module in this package registers onto it."""
 
+import shutil
 from collections.abc import Iterator
 
 import click
@@ -28,7 +29,11 @@ def _iter_full_help(command: click.Command, ctx: click.Context) -> Iterator[str]
 def _print_full_help(ctx: click.Context, param: click.Parameter, value: bool) -> None:
     if not value or ctx.resilient_parsing:
         return
-    for help_text in _iter_full_help(ctx.command, ctx):
+    separator = "─" * shutil.get_terminal_size(fallback=(80, 24)).columns
+    for idx, help_text in enumerate(_iter_full_help(ctx.command, ctx)):
+        if idx:
+            click.echo(separator)
+            click.echo()
         click.echo(help_text)
         click.echo()
     ctx.exit()

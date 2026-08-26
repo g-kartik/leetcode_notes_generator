@@ -10,8 +10,17 @@ class FileVariant(StrEnum):
 class NotesStyle(StrEnum):
     PLAIN = "plain"  # Plain Markdown, no Obsidian syntax
     OBSIDIAN = "obsidian"  # Obsidian wikilinks + callouts
-    PLAIN_AI = "plain+ai"  # Plain + AI-prefilled content (not implemented yet)
-    OBSIDIAN_AI = "obsidian+ai"  # Obsidian + AI-prefilled content (not implemented yet)
+    PLAIN_AI = "plain+ai"  # Plain + AI-prefilled content
+    OBSIDIAN_AI = "obsidian+ai"  # Obsidian + AI-prefilled content
+
+
+# Base style -> its '+ai' variant. The CLI exposes style/--ai as two
+# independent choices; this is the one place they're combined into the
+# NotesStyle the renderer actually understands.
+AI_STYLE = {
+    NotesStyle.PLAIN: NotesStyle.PLAIN_AI,
+    NotesStyle.OBSIDIAN: NotesStyle.OBSIDIAN_AI,
+}
 
 
 def sanitized_filename(frontend_id: int | None, title: str | None) -> str:

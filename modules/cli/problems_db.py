@@ -1,4 +1,4 @@
-"""`db` command group: inspect and manage the stored question database."""
+"""`problems list/show/count/delete`: inspect and manage the stored question database."""
 
 import json
 
@@ -6,20 +6,15 @@ import click
 import structlog
 
 from .common import get_manager
-from .root import cli
+from .problems import problems
 
 logger = structlog.get_logger(__name__)
 
 
-@cli.group()
-def db() -> None:
-    """Inspect and manage the stored question database."""
-
-
-@db.command("list")
-def db_list() -> None:
+@problems.command("list")
+def problems_list() -> None:
     """List every stored question, summarized."""
-    logger.bind(stage="db").info("db_list_command_started")
+    logger.bind(stage="problems").info("problems_list_command_started")
     records = get_manager().storage.list_all()
     if not records:
         click.echo("Database is empty.")
@@ -34,39 +29,39 @@ def db_list() -> None:
         )
 
 
-@db.command("show")
+@problems.command("show")
 @click.argument("slug")
-def db_show(slug: str) -> None:
+def problems_show(slug: str) -> None:
     """Print the full stored record (problem + submission) for one slug, as JSON."""
-    with structlog.contextvars.bound_contextvars(slug=slug, stage="db"):
-        logger.info("db_show_command_started")
+    with structlog.contextvars.bound_contextvars(slug=slug, stage="problems"):
+        logger.info("problems_show_command_started")
         record = get_manager().storage.get_combined_by_slug(slug)
         if record is None:
-            logger.info("db_show_command_skipped", reason="not_found")
+            logger.info("problems_show_command_skipped", reason="not_found")
             raise click.ClickException(f"'{slug}' not found in the database.")
         click.echo(json.dumps(record.model_dump(mode="json"), indent=2, ensure_ascii=False))
 
 
-@db.command("count")
-def db_count() -> None:
+@problems.command("count")
+def problems_count() -> None:
     """Print the total number of stored questions."""
-    logger.bind(stage="db").info("db_count_command_started")
+    logger.bind(stage="problems").info("problems_count_command_started")
     click.echo(str(get_manager().storage.count()))
 
 
-@db.command("delete")
+@problems.command("delete")
 @click.argument("slug")
 @click.option("--force", is_flag=True, help="Skip the confirmation prompt.")
-def db_delete(slug: str, force: bool) -> None:
+def problems_delete(slug: str, force: bool) -> None:
     """Delete a stored question record (problem + submission). Destructive — asks to confirm unless --force."""
-    with structlog.contextvars.bound_contextvars(slug=slug, stage="db"):
-        logger.info("db_delete_command_started", force=force)
+    with structlog.contextvars.bound_contextvars(slug=slug, stage="problems"):
+        logger.info("problems_delete_command_started", force=force)
         if not force:
             click.confirm(f"Delete '{slug}' from the database? This cannot be undone.", abort=True)
         mgr = get_manager()
         problem_deleted = mgr.storage.problems_delete(slug)
         mgr.storage.submissions_delete(slug)
         if not problem_deleted:
-            logger.info("db_delete_command_skipped", reason="not_found")
+            logger.info("problems_delete_command_skipped", reason="not_found")
             raise click.ClickException(f"'{slug}' not found in the database.")
         click.echo(f"Deleted '{slug}'.")

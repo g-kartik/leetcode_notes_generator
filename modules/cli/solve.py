@@ -1,7 +1,8 @@
 """`solve` command: the "I just solved this, get me a ready note" one-shot
 pipeline. Chains the steps that otherwise have to be typed out by hand —
-`populate problem`, `populate images`, `populate submission`, `render`,
-optionally `notes prefill`, and `notes render` — for one or more slugs.
+`problems data fetch --part description/images/submission`, `problems
+render`, optionally `notes prefill`, and `notes render` — for one or more
+slugs.
 
 Each underlying step is still independently idempotent/resumable (see
 CLAUDE.md's three-part pipeline and modules/leetcode/pipeline.py), so `solve`
@@ -20,18 +21,13 @@ from modules.ai_prefill.settings import ai_prefill_settings
 from modules.leetcode.pipeline import LeetCodeSyncManager
 from modules.render.markdown_notes import LeetCodeDSAProblemNotesRender
 from modules.render.markdown_problem import LeetCodeDSAProblemMarkdownRender
-from modules.render.utils import NotesStyle
+from modules.render.utils import AI_STYLE, NotesStyle
 
 from .common import CircuitBreaker, get_manager, print_batch_summary
 from .picker import label_slugs, pick_slugs
 from .root import cli
 
 logger = structlog.get_logger(__name__)
-
-_AI_STYLE = {
-    NotesStyle.PLAIN: NotesStyle.PLAIN_AI,
-    NotesStyle.OBSIDIAN: NotesStyle.OBSIDIAN_AI,
-}
 
 
 def _candidate_slugs(mgr: LeetCodeSyncManager) -> list[str]:
@@ -58,7 +54,7 @@ def _solve_one(
     couldn't be fetched — nothing downstream can proceed without it."""
     log = logger.bind(slug=slug)
 
-    click.echo("  -> populate problem/images/submission")
+    click.echo("  -> fetch description/images/submission")
     mgr.populate_question_metadata(slug, force_update=force)
     record = mgr.storage.problems_get_by_slug(slug)
     if record is None or not record.raw_question_html:
@@ -85,7 +81,7 @@ def _solve_one(
                 if rate_limit_delay:
                     time.sleep(rate_limit_delay)
         if generator.storage.exists(slug):
-            target_style = _AI_STYLE[style]
+            target_style = AI_STYLE[style]
         else:
             log.warning("solve_ai_style_skipped", reason="no_prefill_content_available")
             click.echo("     (no prefill content available — writing without it)")
@@ -115,7 +111,7 @@ def _solve_one(
     help="Base notes style. With --ai, the '+ai' variant of this is used instead.",
 )
 @click.option(
-    "--ai/--no-ai", default=False,
+    "--ai", is_flag=True,
     help="Also generate AI prefill content (if not already generated) and "
     "render the '+ai' variant of --style using it.",
 )
@@ -124,14 +120,14 @@ def _solve_one(
     help="Priority: this flag > OUTPUT_BASE_DIR (.env) > render_settings.DEFAULT_WRITE_DIR.",
 )
 @click.option(
-    "--force/--no-force", default=False,
+    "--force", is_flag=True,
     help="Refetch/re-render every step even if already done. For the notes "
     "file specifically, the existing one is backed up first (same as "
     "'notes render --force').",
 )
 @click.option(
-    "--rate-limit/--no-rate-limit", "rate_limit", default=True, show_default=True,
-    help="With --ai, pause AI_PREFILL_RATE_LIMIT_SECONDS between AI generations.",
+    "--no-rate-limit", "no_rate_limit", is_flag=True,
+    help="With --ai, skip the AI_PREFILL_RATE_LIMIT_SECONDS pause between AI generations.",
 )
 @click.option(
     "--max-failures", "max_failures", type=int, default=5, show_default=True,
@@ -144,7 +140,7 @@ def solve(
     ai: bool,
     output_base: Path | None,
     force: bool,
-    rate_limit: bool,
+    no_rate_limit: bool,
     max_failures: int,
 ) -> None:
     """Populate, render, and note a problem in one go — the "I just solved
@@ -154,7 +150,7 @@ def solve(
         raise click.UsageError("Pass either SLUG or --all, not both.")
 
     mgr = get_manager()
-    rate_limit_delay = ai_prefill_settings.RATE_LIMIT_SECONDS if rate_limit else 0.0
+    rate_limit_delay = 0.0 if no_rate_limit else ai_prefill_settings.RATE_LIMIT_SECONDS
     kwargs = dict(
         style=NotesStyle(style),
         output_base=output_base,

@@ -2,11 +2,11 @@
 
 Thin wrapper around `LeetCodeSyncManager` (fetch/store) and
 `LeetCodeDSAProblemMarkdownRender` (render). All commands are safe to re-run:
-each `populate` step only does network work when the target data is missing
-or `--force` is passed.
+each `problems data fetch` step only does network work when the target data
+is missing or `--force` is passed.
 
-Command implementations live in `modules/cli/`, split by area: sync,
-populate, render, cache, db.
+Command implementations live in `modules/cli/`, split by area: problems
+(data fetch + pending cache, db, render, recent), notes, solve.
 """
 
 from logging_config import configure_logging

@@ -1,4 +1,4 @@
-"""`render` command: render a stored question into Markdown notes."""
+"""`problems render`: render a stored question into Markdown."""
 
 from pathlib import Path
 
@@ -8,12 +8,12 @@ import structlog
 from modules.render.markdown_problem import LeetCodeDSAProblemMarkdownRender
 
 from .common import get_manager, print_batch_summary
-from .root import cli
+from .problems import problems
 
 logger = structlog.get_logger(__name__)
 
 
-@cli.command()
+@problems.command("render")
 @click.argument("slug", required=False)
 @click.option(
     "--all", "run_all", is_flag=True,
@@ -23,12 +23,12 @@ logger = structlog.get_logger(__name__)
     "--output-base", "output_base", type=click.Path(path_type=Path), default=None,
     help="Priority: this flag > OUTPUT_BASE_DIR (.env) > render_settings.DEFAULT_WRITE_DIR.",
 )
-def render(
+def problems_render(
     slug: str | None,
     run_all: bool,
     output_base: Path | None,
 ) -> None:
-    """Render a stored question into Markdown notes.
+    """Render a stored question into Markdown.
 
     Always writes the remote-image-links variant. Also writes a local variant
     (with downloaded images copied alongside) when the problem actually has
@@ -48,7 +48,7 @@ def render(
             record = mgr.storage.get_combined_by_slug(slug)
             if record is None or not record.raw_question_html:
                 log.warning("render_command_skipped", reason="no_problem_data_stored")
-                raise click.ClickException(f"no problem data found for '{slug}', run 'populate problem {slug}' first")
+                raise click.ClickException(f"no problem data found for '{slug}', run 'problems data fetch {slug}' first")
             log.info("render_command_started")
             renderer.save(record)
             log.info("render_command_succeeded")

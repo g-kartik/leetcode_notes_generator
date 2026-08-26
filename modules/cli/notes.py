@@ -10,7 +10,7 @@ import structlog
 from modules.ai_prefill import AIPrefillGenerator, AIProviderError, PrefillGenerationError
 from modules.ai_prefill.settings import ai_prefill_settings
 from modules.render.markdown_notes import LeetCodeDSAProblemNotesRender, PrefillMissingError
-from modules.render.utils import NotesStyle
+from modules.render.utils import AI_STYLE, NotesStyle
 
 from .common import CircuitBreaker, get_manager, print_batch_summary
 from .picker import label_records, pick_slugs
@@ -34,11 +34,16 @@ def notes() -> None:
 )
 @click.option(
     "--style",
-    type=click.Choice([s.value for s in NotesStyle]),
+    type=click.Choice([NotesStyle.PLAIN.value, NotesStyle.OBSIDIAN.value]),
     default=NotesStyle.PLAIN.value,
     show_default=True,
-    help="'+ai' styles pull in the latest stored AI prefill content — run "
-    "'notes prefill SLUG' first, or generation fails with a clear error.",
+    help="Base notes style. With --ai, the '+ai' variant of this is used instead.",
+)
+@click.option(
+    "--ai", is_flag=True,
+    help="Pull in the latest stored AI prefill content for this slug and "
+    "render the '+ai' variant of --style using it. Run 'notes prefill SLUG' "
+    "first, or generation fails with a clear error.",
 )
 @click.option(
     "--output-base",
@@ -48,8 +53,7 @@ def notes() -> None:
     help="Priority: this flag > OUTPUT_BASE_DIR (.env) > render_settings.DEFAULT_WRITE_DIR.",
 )
 @click.option(
-    "--force/--no-force",
-    default=False,
+    "--force", is_flag=True,
     help="Regenerate even if a notes file already exists — the existing file "
     "is backed up first (Leetcode Notes/backups/<id>-<slug>/), since it "
     "may contain hand-written content.",
@@ -58,6 +62,7 @@ def notes_render(
     slug: str | None,
     run_all: bool,
     style: str,
+    ai: bool,
     output_base: Path | None,
     force: bool,
 ) -> None:
@@ -73,8 +78,9 @@ def notes_render(
         raise click.UsageError("Pass either SLUG or --all, not both.")
 
     mgr = get_manager()
+    target_style = AI_STYLE[NotesStyle(style)] if ai else NotesStyle(style)
     renderer = LeetCodeDSAProblemNotesRender(
-        style=NotesStyle(style),
+        style=target_style,
         output_base=output_base,
     )
 
@@ -85,7 +91,7 @@ def notes_render(
             if record is None or not record.raw_question_html:
                 log.warning("notes_command_skipped", reason="no_problem_data_stored")
                 raise click.ClickException(
-                    f"no problem data found for '{slug}', run 'populate problem {slug}' first"
+                    f"no problem data found for '{slug}', run 'problems data fetch {slug}' first"
                 )
             log.info("notes_command_started")
             try:
@@ -100,7 +106,7 @@ def notes_render(
                 if status == "written"
                 else " (already exists, use --force to regenerate)"
             )
-            click.echo(f"[{label}] notes({style}) {slug}{suffix}")
+            click.echo(f"[{label}] notes({target_style.value}) {slug}{suffix}")
         return
 
     records = [r for r in mgr.storage.list_all_combined() if r.raw_question_html]
@@ -164,18 +170,14 @@ def notes_render(
     help="Generate prefill content for every slug that already has problem data populated.",
 )
 @click.option(
-    "--force/--no-force",
-    default=False,
+    "--force", is_flag=True,
     help="Generate a new version even if prefill content already exists for this "
     "slug. Prior versions are kept either way — see AIPrefillStorage.",
 )
 @click.option(
-    "--rate-limit/--no-rate-limit",
-    "rate_limit",
-    default=True,
-    show_default=True,
-    help="With --all, pause AI_PREFILL_RATE_LIMIT_SECONDS between generations. "
-    "Disable on a plan without tight usage limits.",
+    "--no-rate-limit", "no_rate_limit", is_flag=True,
+    help="With --all, skip the AI_PREFILL_RATE_LIMIT_SECONDS pause between "
+    "generations. Only worth it on a plan without tight usage limits.",
 )
 @click.option(
     "--limit",
@@ -196,7 +198,7 @@ def notes_prefill(
     slug: str | None,
     run_all: bool,
     force: bool,
-    rate_limit: bool,
+    no_rate_limit: bool,
     limit: int | None,
     max_failures: int,
 ) -> None:
@@ -215,7 +217,7 @@ def notes_prefill(
 
     mgr = get_manager()
     generator = AIPrefillGenerator()
-    delay = ai_prefill_settings.RATE_LIMIT_SECONDS if rate_limit else 0.0
+    delay = 0.0 if no_rate_limit else ai_prefill_settings.RATE_LIMIT_SECONDS
 
     if slug:
         with structlog.contextvars.bound_contextvars(slug=slug, stage="prefill"):
@@ -224,7 +226,7 @@ def notes_prefill(
             if record is None or not record.raw_question_html:
                 log.warning("prefill_command_skipped", reason="no_problem_data_stored")
                 raise click.ClickException(
-                    f"no problem data found for '{slug}', run 'populate problem {slug}' first"
+                    f"no problem data found for '{slug}', run 'problems data fetch {slug}' first"
                 )
             if not force and generator.storage.exists(slug):
                 log.info("prefill_command_skipped", reason="prefill_already_exists")

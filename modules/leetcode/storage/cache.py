@@ -12,12 +12,12 @@ class PendingCacheStore:
     Solved-slugs pending cache.
 
     Tracks solved slugs that still need one or more of:
-      metadata / images / submission
+      description / images / submission
     A slug is removed from the cache automatically once all three parts
     are marked complete.
     """
 
-    CACHE_PARTS = ("question", "images", "submission")
+    CACHE_PARTS = ("description", "images", "submission")
 
     def __init__(self):
         self.cache_path = leetcode_settings.DSA_PROBLEMS_CACHE_JSON_DB
@@ -45,7 +45,7 @@ class PendingCacheStore:
         temp_path.replace(self.cache_path)
 
     def read_pending_cache(self) -> dict[str, dict[str, bool]]:
-        """Returns the full pending cache: {slug: {question, images, submission}}."""
+        """Returns the full pending cache: {slug: {description, images, submission}}."""
         cache = self._load_cache()
         logger.info("pending_cache_read", pending_count=len(cache))
         return cache
@@ -108,7 +108,7 @@ class PendingCacheStore:
 
     def mark_part_fetched(self, slug: str, part: str) -> None:
         """
-        Marks `part` ('question' | 'images' | 'submission') as fetched for `slug`.
+        Marks `part` ('description' | 'images' | 'submission') as fetched for `slug`.
         If all three parts are now True, the slug is removed from the cache entirely.
         No-op if the slug isn't currently tracked in the cache.
         """

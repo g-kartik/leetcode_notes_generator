@@ -26,36 +26,53 @@ class LeetCodeSyncManager:
     # Step 1: discover solved problems (cache-backed)
     # ------------------------------------------------------------------ #
 
-    def sync_solved_questions_data_entry(
-        self, force_refresh: bool = False
-    ) -> list[str]:
+    def sync_pending_cache(self) -> dict:
         """
-        Returns slugs still pending at least one of metadata/images/submission.
-        By default reads straight from the pending-slugs cache (no API call).
-        Pass force_refresh=True to hit the LeetCode API for the latest solved
-        list and merge any newly-solved slugs into the cache. Also runs
-        automatically the first time, if the cache is empty.
+        The full "pending sync" operation, always live (no cache-only mode —
+        for a free/local view of the cache, read it directly instead):
+
+          1. Reconciles the pending cache against actual stored data.
+          2. Hits LeetCode's complete solved-questions list and merges any
+             newly-solved slugs in — the backstop that catches everything
+             ever solved, regardless of how long it's been since the last
+             sync.
+          3. Reconciles against the recent-accepted-submissions feed (see
+             reconcile_recent_accepted) to catch resubmits of already-stored
+             problems, which the complete solved-list alone can't detect
+             (it has no timestamps).
 
         Note: this only populates the pending cache, never the DB. A DB record
         for a slug is created the first time populate_question_metadata actually
         fetches real data for it — the DB should only ever hold slugs with at
         least one populated part.
+
+        Returns {"pending_slugs", "new_slugs", "stale_submission_slugs"}.
         """
-        log = logger.bind(stage="sync")
+        log = logger.bind(stage="pending_sync")
         self.storage.reconcile_pending_cache()
-        cache = self.storage.read_pending_cache()
+        pending_before = set(self.storage.read_pending_cache().keys())
 
-        if force_refresh or not cache:
-            log.info("solved_slugs_refresh_started", force_refresh=force_refresh)
-            solved_problem_slugs = self.client.get_solved_questions_slugs()
-            cache = self.storage.refresh_pending_cache(solved_problem_slugs)
-            log.info("solved_slugs_refresh_completed", fetched_count=len(solved_problem_slugs))
-        else:
-            log.info("solved_slugs_cache_used", reason="cache_populated_and_no_refresh_requested")
+        log.info("solved_slugs_refresh_started")
+        solved_problem_slugs = self.client.get_solved_questions_slugs()
+        self.storage.refresh_pending_cache(solved_problem_slugs)
+        log.info("solved_slugs_refresh_completed", fetched_count=len(solved_problem_slugs))
 
-        pending_slugs = list(cache.keys())
-        log.info("pending_slugs_resolved", pending_count=len(pending_slugs))
-        return pending_slugs
+        stale_submission_slugs = self.reconcile_recent_accepted()
+
+        pending_slugs = list(self.storage.read_pending_cache().keys())
+        new_slugs = sorted(set(pending_slugs) - pending_before)
+
+        log.info(
+            "pending_sync_completed",
+            pending_count=len(pending_slugs),
+            new_count=len(new_slugs),
+            stale_submission_count=len(stale_submission_slugs),
+        )
+        return {
+            "pending_slugs": pending_slugs,
+            "new_slugs": new_slugs,
+            "stale_submission_slugs": stale_submission_slugs,
+        }
 
     # ------------------------------------------------------------------ #
     # Part 1: Question metadata + content (description)
@@ -64,11 +81,11 @@ class LeetCodeSyncManager:
     def populate_question_metadata(self, slug: str, force_update: bool = False) -> bool:
         """
         Fetches question metadata + description content (via GraphQL) and stores it.
-        Marks 'metadata' as fetched in the pending cache on success.
+        Marks 'description' as fetched in the pending cache on success.
 
         If metadata already exists and force_update is False, this is a no-op.
         """
-        with structlog.contextvars.bound_contextvars(slug=slug, stage="problem"):
+        with structlog.contextvars.bound_contextvars(slug=slug, stage="description"):
             existing_record = self.storage.problems_get_by_slug(slug)
 
             has_metadata = existing_record is not None and bool(
@@ -76,16 +93,16 @@ class LeetCodeSyncManager:
             )
             if has_metadata and not force_update:
                 logger.info(
-                    "problem_already_populated",
+                    "description_already_populated",
                     question_id=existing_record.id,
                     title=existing_record.title,
                 )
                 return False
 
-            logger.info("problem_fetch_started", force_update=force_update)
+            logger.info("description_fetch_started", force_update=force_update)
             gql_data = self.client.get_question_details(slug)
             if not gql_data:
-                logger.warning("problem_fetch_failed", reason="no_data_returned")
+                logger.warning("description_fetch_failed", reason="no_data_returned")
                 return False
 
             parsed_data = parsers.gql_question_data(gql_data)
@@ -106,10 +123,10 @@ class LeetCodeSyncManager:
             question_record.content.local_html = question_record.raw_question_html
 
             self.storage.problems_add_or_update(question_record)
-            self.storage.mark_part_fetched(slug, "question")
+            self.storage.mark_part_fetched(slug, "description")
 
             logger.info(
-                "problem_fetch_succeeded",
+                "description_fetch_succeeded",
                 question_id=question_record.id,
                 title=question_record.title,
             )
@@ -186,14 +203,14 @@ class LeetCodeSyncManager:
 
         If submission data already exists and force_update is False, this is a
         no-op — unless the pending cache has the 'submission' part marked as
-        outstanding (see sync_recent_accepted), in which case it's refetched
-        regardless.
+        outstanding (see reconcile_recent_accepted), in which case it's
+        refetched regardless.
         """
         with structlog.contextvars.bound_contextvars(slug=slug, stage="submission"):
             existing_submission = self.storage.submissions_get_by_slug(slug)
 
             # The pending cache can say "submission" is outstanding even though
-            # a submission record already exists — e.g. sync_recent_accepted
+            # a submission record already exists — e.g. reconcile_recent_accepted
             # reopened it because a fresher accepted submission was seen. That
             # should be refetched even without an explicit force_update.
             still_pending_in_cache = self.storage.is_part_pending(slug, "submission")
@@ -242,7 +259,11 @@ class LeetCodeSyncManager:
         Fetches, parses, optionally filters to today (local time), and
         dedupes (one entry per slug, latest timestamp) the recent accepted-
         submissions feed. Shared by list_recent_accepted and
-        sync_recent_accepted — this part never touches storage.
+        reconcile_recent_accepted — this part never touches storage.
+
+        Note: LeetCode's recentAcSubmissionList query appears to cap out
+        around 20 results regardless of `limit` — don't rely on a higher
+        limit to widen the reconciliation window.
         """
         log = logger.bind(stage="recent")
         log.info("recent_accepted_fetch_started", limit=limit, today_only=today_only)
@@ -257,69 +278,47 @@ class LeetCodeSyncManager:
         log.info("recent_accepted_fetch_completed", submission_count=len(submissions))
         return submissions
 
-    def list_recent_accepted(self, limit: int = 20, today_only: bool = True) -> list[dict]:
+    def list_recent_accepted(self, limit: int = 20, today_only: bool = False) -> list[dict]:
         """
         Returns recently-accepted submissions as {slug, title, timestamp}
-        dicts, filtered to today by default. Read-only — never touches
-        stored state, safe to call as often as you like.
+        dicts — the full recent-accepted batch by default, optionally
+        narrowed to today (local time). Read-only — never touches stored
+        state, safe to call as often as you like.
         """
         return self._fetch_recent_accepted(limit, today_only)
 
-    def sync_recent_accepted(self, limit: int = 20, today_only: bool = True) -> dict:
+    def reconcile_recent_accepted(self, limit: int = 20) -> list[str]:
         """
-        Fetches recently-accepted submissions and classifies each slug
-        against what's already stored, updating only the pending cache.
-        Never fetches problem/image/submission data itself — that stays
-        populate's job, run separately.
+        Fetches the recent-accepted-submissions feed — always the full
+        batch LeetCode returns, never filtered to today, since it's the
+        only source with per-submission timestamps and there's no reason to
+        throw away comparison data that cost the same one API call to get —
+        and reopens the 'submission' part for any slug whose stored
+        submission is older than what's now accepted (i.e. it was resolved
+        again since the last fetch).
 
-        Classification per slug:
-          - no submission record stored at all -> "new_slugs": added to the
-            pending cache with every part outstanding, same as a normal
-            solved-slugs sync discovering it for the first time.
-          - a submission record exists but is older than this accepted
-            timestamp -> "stale_submission_slugs": only the 'submission'
-            part is reopened in the pending cache (question/images are left
-            alone — the description/images haven't changed).
-          - the stored submission is already current -> "up_to_date_slugs".
+        Brand-new slugs are deliberately not handled here — the complete
+        solved-list refresh (see sync_pending_cache) already catches those;
+        this only ever reopens 'submission' on slugs already known.
 
-        Returns a dict with the deduped "solved" list plus the three
-        classification lists.
+        Returns the list of slugs whose 'submission' part was reopened.
         """
-        log = logger.bind(stage="recent_sync")
-        submissions = self._fetch_recent_accepted(limit, today_only)
+        log = logger.bind(stage="pending_sync")
+        submissions = self._fetch_recent_accepted(limit, today_only=False)
 
-        new_slugs = []
         stale_submission_slugs = []
-        up_to_date_slugs = []
-
         for item in submissions:
             slug = item["slug"]
             existing_submission = self.storage.submissions_get_by_slug(slug)
-
-            if existing_submission is None:
-                new_slugs.append(slug)
-            elif existing_submission.submission_date < item["timestamp"]:
+            if existing_submission is not None and existing_submission.submission_date < item["timestamp"]:
                 stale_submission_slugs.append(slug)
-            else:
-                up_to_date_slugs.append(slug)
-
-        if new_slugs:
-            self.storage.refresh_pending_cache(new_slugs)
 
         for slug in stale_submission_slugs:
             self.storage.reopen_part(slug, "submission")
 
         log.info(
-            "recent_accepted_sync_completed",
-            solved_count=len(submissions),
-            new_count=len(new_slugs),
-            stale_count=len(stale_submission_slugs),
-            up_to_date_count=len(up_to_date_slugs),
+            "recent_accepted_reconciled",
+            checked_count=len(submissions),
+            stale_submission_count=len(stale_submission_slugs),
         )
-
-        return {
-            "solved": submissions,
-            "new_slugs": new_slugs,
-            "stale_submission_slugs": stale_submission_slugs,
-            "up_to_date_slugs": up_to_date_slugs,
-        }
+        return stale_submission_slugs
