@@ -100,6 +100,15 @@ class LeetCodeDSAProblemNotesRender:
             dict.fromkeys([*_EMPTY_PREFILL["pattern_tags"], *question_tag_slugs])
         )
 
+    def _flashcard_deck_tags(self, record: CombinedQuestionRecord) -> list[str]:
+        """Deck-tag-only scaffold for the Flashcards callout — no AI, no cards,
+        just one '#flashcards/DSA/<tag>' line per note tag plus the problem
+        itself, ready for the user to add cards under by hand."""
+        lines = [f"#flashcards/DSA/{tag}" for tag in self._tags(record)]
+        if record.slug:
+            lines.append(f"#flashcards/DSA/problems/{record.slug}")
+        return lines
+
     def _warn_if_missing(self, path: Path, log) -> None:
         if not path.exists():
             log.warning(
@@ -121,6 +130,7 @@ class LeetCodeDSAProblemNotesRender:
             difficulty=record.difficulty,
             url=record.url,
             tags=self._tags(record),
+            flashcards=self._flashcard_deck_tags(record),
         )
 
         if self.style in _AI_STYLES:
@@ -134,6 +144,8 @@ class LeetCodeDSAProblemNotesRender:
             # PrefillContent's field names are chosen to match these template
             # vars 1:1 (see modules/ai_prefill/schema.py), so this directly
             # overrides the corresponding _EMPTY_PREFILL placeholders.
+            # 'flashcards' is deliberately not part of PrefillContent — the
+            # deck-tag scaffold above is left as-is either way.
             context.update(prefill.content.model_dump())
             log.info("notes_prefill_applied", generated_at=str(prefill.generated_at))
 

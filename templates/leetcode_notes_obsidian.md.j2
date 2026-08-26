@@ -6,7 +6,12 @@
      (no extension) for the rendered problem/solution file(s)
    Prefill vars (all optional — pass None/empty to leave blank for manual fill):
      aliases, related, problem_summary, pattern, core_idea, invariant,
-     trap, recognition_clue, complexity_time, complexity_space, takeaway #}
+     trap, recognition_clue, complexity_time, complexity_space, takeaway
+   flashcards: list[str], deterministic deck-tag scaffold for the Obsidian
+     Spaced Repetition plugin — NOT part of AI prefill (see
+     modules/render/markdown_notes.py::_flashcard_deck_tags): one
+     "#flashcards/DSA/<tag>" line per note tag, plus
+     "#flashcards/DSA/problems/<slug>", no cards. Cards are added by hand. #}
 {% macro bullets(items) -%}
     {%- if items -%}
         {{ "- " ~ items | join("\n- ") }}
@@ -70,4 +75,11 @@ problem_link: "{{ url }}"
     {% for r in related %}
         - [[{{ r }}]]
     {% endfor %}
+{% endif %}
+{% if flashcards %}
+
+> [!info]- Flashcards
+{% for line in flashcards %}
+> {{ line }}
+{% endfor %}
 {% endif %}
