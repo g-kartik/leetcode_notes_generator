@@ -114,6 +114,39 @@
             "When maximizing width * min(height) between two boundaries, use two pointers starting at the extremes and always move the pointer at the smaller height inward — this greedy elimination is provably safe and avoids O(n^2) brute force."
           ]
         }
+      },
+      {
+        "generated_at": "2026-08-26T19:34:20.357332",
+        "provider": "claude_code",
+        "content": {
+          "problem_summary": "Given heights of vertical lines at each index, find two lines that with the x-axis form a container holding the maximum amount of water (area = width × min height).",
+          "pattern": [
+            "two pointers",
+            "greedy"
+          ],
+          "core_idea": [
+            "Start with the widest possible container (`left=0`, `right=n-1`) since width can only shrink as pointers move inward, so we must compensate by seeking taller lines.",
+            "The shorter of the two lines always bounds the area, so moving the pointer at the taller line inward can never improve the area (width shrinks, height still bounded by the same or shorter line) — only moving the shorter line's pointer has a chance to increase height and possibly area.",
+            "This lets us discard the shorter line's position entirely and never reconsider it, giving a linear scan instead of checking all O(n^2) pairs."
+          ],
+          "invariant": [
+            "At every step, `max_water` holds the best area seen among all pairs already considered, and the region between the current `left` and `right` still contains the optimal answer if it hasn't been found yet."
+          ],
+          "trap": [
+            "Moving the taller pointer instead of the shorter one can skip past the optimal pair since it only decreases width without any chance of increasing the bounding height.",
+            "Using `<=` vs `<` when comparing `height[left]` and `height[right]` doesn't affect correctness here but be consistent about which pointer moves on ties.",
+            "Recomputing area with `max(height[left], height[right])` instead of `min` would silently break the solution."
+          ],
+          "recognition_clue": [
+            "Maximize an area/volume defined by two boundary indices where the value depends on `width * min(bound1, bound2)` → consider two pointers starting from the extremes and greedily discarding the smaller boundary.",
+            "When brute force is O(n^2) over all index pairs but the objective is monotonic in width, look for a way to shrink the search space by eliminating one endpoint per step."
+          ],
+          "complexity_time": "O(n)",
+          "complexity_space": "O(1)",
+          "takeaway": [
+            "When an objective is limited by the smaller of two values, the larger value can never be the bottleneck for improvement — always move the pointer at the limiting (smaller) side to search for a better one."
+          ]
+        }
       }
     ],
     "two-sum": [
