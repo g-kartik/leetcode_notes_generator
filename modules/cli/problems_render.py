@@ -8,6 +8,7 @@ import structlog
 from modules.render.markdown_problem import LeetCodeDSAProblemMarkdownRender
 
 from .common import get_manager, print_batch_summary
+from .picker import label_records, pick_slugs
 from .problems import problems
 
 logger = structlog.get_logger(__name__)
@@ -33,11 +34,11 @@ def problems_render(
     Always writes the remote-image-links variant. Also writes a local variant
     (with downloaded images copied alongside) when the problem actually has
     images that were successfully downloaded — see ProblemRecord.has_local_variant.
+    Omit both SLUG and --all to pick interactively instead — a searchable,
+    multi-select prompt over every slug with problem data populated.
     """
     if slug and run_all:
         raise click.UsageError("Pass either SLUG or --all, not both.")
-    if not slug and not run_all:
-        raise click.UsageError("Pass either SLUG or --all.")
 
     mgr = get_manager()
     renderer = LeetCodeDSAProblemMarkdownRender(output_base=output_base)
@@ -56,6 +57,17 @@ def problems_render(
         return
 
     records = [r for r in mgr.storage.list_all_combined() if r.raw_question_html]
+
+    if not run_all:
+        if not records:
+            click.echo("Nothing to pick from — no slugs have problem data populated yet.")
+            return
+        picked = pick_slugs(label_records(records))
+        if not picked:
+            click.echo("Nothing selected.")
+            return
+        records = [r for r in records if r.slug in picked]
+
     if not records:
         logger.info("render_command_batch_completed", stage="render", reason="no_problem_data_stored")
         click.echo("Nothing to render — no slugs have problem data populated yet.")

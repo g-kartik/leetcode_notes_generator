@@ -404,25 +404,54 @@ def pending_list() -> None:
 
 
 @pending.command("show")
-@click.argument("slug")
-def pending_show(slug: str) -> None:
-    """Show cache progress for one slug."""
-    with structlog.contextvars.bound_contextvars(slug=slug, stage="pending"):
-        logger.info("pending_show_command_started")
-        entry = get_manager().storage.read_pending_cache().get(slug)
-        if entry is None:
-            logger.info("pending_show_command_skipped", reason="slug_not_tracked")
-            raise click.ClickException(f"'{slug}' is not in the pending cache (fully done, or never tracked).")
-        _print_cache_table({slug: entry})
+@click.argument("slug", required=False)
+def pending_show(slug: str | None) -> None:
+    """Show cache progress for one or more slugs. Omit SLUG to pick
+    interactively instead — a searchable, multi-select prompt over every
+    pending slug."""
+    mgr = get_manager()
+    entries = mgr.storage.read_pending_cache()
+
+    if slug:
+        with structlog.contextvars.bound_contextvars(slug=slug, stage="pending"):
+            logger.info("pending_show_command_started")
+            entry = entries.get(slug)
+            if entry is None:
+                logger.info("pending_show_command_skipped", reason="slug_not_tracked")
+                raise click.ClickException(f"'{slug}' is not in the pending cache (fully done, or never tracked).")
+            _print_cache_table({slug: entry})
+        return
+
+    slugs = _pick_target_slugs(mgr, list(entries.keys()))
+    if not slugs:
+        return
+    _print_cache_table({s: entries[s] for s in slugs})
 
 
 @pending.command("clear")
-@click.argument("slug")
-def pending_clear(slug: str) -> None:
-    """Manually drop a slug from the pending cache."""
-    with structlog.contextvars.bound_contextvars(slug=slug, stage="pending"):
-        logger.info("pending_clear_command_started")
-        if get_manager().storage.remove_from_cache(slug):
-            click.echo(f"Removed '{slug}' from the pending cache.")
-        else:
-            click.echo(f"'{slug}' was not in the pending cache.")
+@click.argument("slug", required=False)
+def pending_clear(slug: str | None) -> None:
+    """Manually drop one or more slugs from the pending cache. Omit SLUG to
+    pick interactively instead — a searchable, multi-select prompt over
+    every pending slug."""
+    mgr = get_manager()
+
+    if slug:
+        with structlog.contextvars.bound_contextvars(slug=slug, stage="pending"):
+            logger.info("pending_clear_command_started")
+            if mgr.storage.remove_from_cache(slug):
+                click.echo(f"Removed '{slug}' from the pending cache.")
+            else:
+                click.echo(f"'{slug}' was not in the pending cache.")
+        return
+
+    slugs = _pick_target_slugs(mgr, list(mgr.storage.read_pending_cache().keys()))
+    if not slugs:
+        return
+    for target_slug in slugs:
+        with structlog.contextvars.bound_contextvars(slug=target_slug, stage="pending"):
+            logger.info("pending_clear_command_started")
+            if mgr.storage.remove_from_cache(target_slug):
+                click.echo(f"Removed '{target_slug}' from the pending cache.")
+            else:
+                click.echo(f"'{target_slug}' was not in the pending cache.")
