@@ -306,6 +306,48 @@
           ]
         }
       }
+    ],
+    "maximum-sum-of-distinct-subarrays-with-length-k": [
+      {
+        "generated_at": "2026-08-26T12:34:12.519816",
+        "provider": "claude_code",
+        "content": {
+          "problem_summary": "Given an array nums and integer k, find the maximum sum among all length-k contiguous subarrays whose elements are all distinct; return 0 if none qualify.",
+          "pattern": [
+            "Sliding window (fixed size)",
+            "Two pointers with a hash set for duplicate tracking"
+          ],
+          "core_idea": [
+            "Maintain a window of exactly k elements using a set to track distinctness and a running sum for the total.",
+            "When the incoming element already exists in the window, shrink from the left (removing elements from the set and sum) until the duplicate is gone before adding the new element.",
+            "After insertion, if the window exceeds size k, evict the leftmost element to keep the window size fixed at k.",
+            "Only compare/update the result when the window size is exactly k, since that's the only valid state to check."
+          ],
+          "invariant": [
+            "The set 'window' always contains exactly the elements currently between left and right (inclusive), with no duplicates.",
+            "window_sum always equals the sum of the elements currently in 'window'.",
+            "len(window) never exceeds k at the end of each iteration."
+          ],
+          "trap": [
+            "Forgetting to remove duplicates from the left before adding the new right element leads to an incorrect set/sum state.",
+            "Only updating the result when len(window) == k — checking at the wrong time (e.g., before the window reaches size k) undercounts valid windows.",
+            "Not shrinking the window size back down to k after it grows to k+1, which would let the window drift out of the fixed-size constraint.",
+            "Off-by-one errors in when 'left' is advanced relative to updating window_sum and the set.",
+            "Returning something other than 0 when no valid window of distinct elements exists."
+          ],
+          "recognition_clue": [
+            "Fixed subarray length k is specified, hinting at a fixed-size sliding window rather than variable-size.",
+            "Requirement that all elements in the subarray be distinct suggests using a hash set to detect duplicates in the current window.",
+            "Need for a running sum (subarray sum) suggests maintaining an incremental sum rather than recomputing per window.",
+            "Large constraint (nums.length up to 1e5) rules out brute force O(n*k) and points to an O(n) sliding-window approach."
+          ],
+          "complexity_time": "O(n) — each element is added and removed from the window at most once across the traversal",
+          "complexity_space": "O(k) — the set/window holds at most k distinct elements at a time",
+          "takeaway": [
+            "When a subarray must have a fixed length and a uniqueness constraint, combine a fixed-size sliding window with a hash set to enforce distinctness while incrementally tracking the sum for O(n) performance."
+          ]
+        }
+      }
     ]
   }
 }
