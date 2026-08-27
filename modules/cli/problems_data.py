@@ -4,7 +4,7 @@ pending-slugs cache used to track what's still outstanding."""
 import click
 import structlog
 
-from modules.leetcode.pipeline import LeetCodeSyncManager
+from modules.sync.pipeline import LeetCodeSyncManager
 
 from .common import BatchPacer, CircuitBreaker, get_manager, print_batch_summary
 from .picker import label_slugs, pick_slugs

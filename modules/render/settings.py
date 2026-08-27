@@ -6,7 +6,7 @@ from settings import BaseProjectSettings
 
 
 class RendererSettings(BaseProjectSettings):
-    TEMPLATE_DIR: Path = BaseProjectSettings.PROJECT_ROOT_DIR / "templates"
+    TEMPLATE_DIR: Path = BaseProjectSettings.PROJECT_ROOT_DIR / "resources" / "templates"
 
     DEFAULT_WRITE_DIR: Path = BaseProjectSettings.PROJECT_ROOT_DIR / "LOCAL_RENDER"
 

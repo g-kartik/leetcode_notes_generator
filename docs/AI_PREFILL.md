@@ -38,32 +38,35 @@ tweaking a prompt, or just compare a couple of attempts.
 **Step 2 — Render.**
 
 ```bash
-uv run python cli.py notes render two-sum --style plain+ai
+uv run python cli.py notes render two-sum --style plain --ai
 ```
 
 This writes the actual note file, using the **latest** saved version from step 1 to
-fill in the draft sections. If you haven't generated anything yet for that slug, this
-fails with a message telling you to run `notes prefill` first — it never silently
-writes a blank note.
+fill in the draft sections. If you haven't generated anything yet for that slug,
+`notes render --ai` generates one for you automatically before rendering — you don't
+have to run `notes prefill` first. Pass `--regenerate-ai` instead of `--ai` to always
+generate a fresh version first, even if one already exists.
 
-If you don't pass `+ai` (just `--style plain` or `--style obsidian`, the default),
-those sections are left blank for you to fill in by hand, exactly like before this
-feature existed. AI prefill is opt-in.
+If you don't pass `--ai` at all (just `--style plain` or `--style obsidian`, the
+default), those sections are left blank for you to fill in by hand, exactly like
+before this feature existed. AI prefill is opt-in.
 
 ### Batch versions
 
-Both commands support `--all` to run over every problem you've already fetched:
+Both commands support `--all` to run over every problem you've already fetched
+(`notes render` also supports `--recent`/`--today` to scope to what LeetCode says you
+solved recently — see its `--help`):
 
 ```bash
 uv run python cli.py notes prefill --all
-uv run python cli.py notes render --all --style obsidian+ai
+uv run python cli.py notes render --all --style obsidian --ai
 ```
 
 Useful flags for `notes prefill --all`:
 
 | Flag | What it does |
 |---|---|
-| `--force` | Generate a new version even for slugs that already have one. |
+| `--regenerate` | Generate a new version even for slugs that already have one. |
 | `--no-rate-limit` | Skip the small pause between calls (see below). Fine if you're not on a rate-limited plan. |
 | `--limit N` | Only process the first N pending slugs. |
 | `--max-failures N` | Stop the batch after N calls in a row fail (default 5, catches something being broken early instead of grinding through hundreds of failures). |
@@ -75,7 +78,7 @@ Useful flags for `notes prefill --all`:
 | What | Where |
 |---|---|
 | Generated content (the actual data) | `LEETCODE_DATA/dsa_problems/ai_prefill.json` |
-| The two prompts sent to the AI | `prompts/ai_prefill/system_prompt.txt` and `prompts/ai_prefill/user_prompt.txt` — plain text files, edit them directly to change the instructions or wording |
+| The two prompts sent to the AI | `resources/prompts/ai_prefill/system_prompt.txt` and `resources/prompts/ai_prefill/user_prompt.txt` — plain text files, edit them directly to change the instructions or wording |
 | The JSON shape the AI must answer in | `modules/ai_prefill/schema.py` (`PrefillContent`) |
 | Settings (which AI tool, timeouts, etc.) | `.env` — see `.env.example`, everything is prefixed `AI_PREFILL_` |
 | The code | `modules/ai_prefill/` |
@@ -126,8 +129,8 @@ AI_PREFILL_ENVELOPE_KEY=
 
 The only real requirement for any tool you plug in this way: when asked, it must be
 able to answer with **just the JSON object** described in
-`prompts/ai_prefill/system_prompt.txt` — no extra commentary. Most instructable
-models can do this if you tell them to (the default prompt already does).
+`resources/prompts/ai_prefill/system_prompt.txt` — no extra commentary. Most
+instructable models can do this if you tell them to (the default prompt already does).
 
 ### If your tool needs something more custom
 
@@ -159,6 +162,19 @@ name in `.env`.
 between each generation. This exists for accounts on a plan with tighter usage limits.
 If you're on a plan without that concern, pass `--no-rate-limit` on the command, or
 just set `AI_PREFILL_RATE_LIMIT_SECONDS=0` in `.env` to make it the default.
+
+---
+
+## A note on cost/performance (default provider)
+
+Since each `notes prefill` call runs `claude -p` as a fresh subprocess with no shared
+session, it's worth knowing whether that defeats prompt caching — it doesn't.
+Anthropic's cache is keyed by content hash at the API layer, not by client session, so
+the (fully static) system prompt gets served from cache automatically across repeated
+calls once it's been created once, with no code needed on our end to make that happen.
+In practice, per-call cost/usage is dominated by input tokens (the problem description
++ your solution code, each capped at `AI_PREFILL_MAX_DESCRIPTION_CHARS`/
+`AI_PREFILL_MAX_CODE_CHARS`), not by the small JSON object the model outputs.
 
 ---
 

@@ -15,14 +15,13 @@ pluggable AI provider. Driven by a `click`-based CLI (`cli.py`).
 - Run the CLI: `uv run python cli.py <command> ...`, or `uv run python -m <module>` /
   `uv run python -c "..."` for one-off scripting against the library directly, e.g.:
   ```python
-  from modules.leetcode.pipeline import LeetCodeSyncManager
+  from modules.sync.pipeline import LeetCodeSyncManager
   mgr = LeetCodeSyncManager()
   result = mgr.sync_pending_cache()
   ```
 - `uv run python cli.py -H` (or `--help-all`) prints help for every command and subcommand,
   recursively, with a visible separator line between each block — the fastest way to see the
   whole command tree at once. `uv run python cli.py <command> -h` for one command's help.
-- `manage.py` exists but is an empty stub — unused; `cli.py` is the real entrypoint.
 - `shell/leetnotes` + `shell/README.md`: an optional wrapper executable + shell-completion
   setup so `leetnotes <TAB>` works from any directory (see that README for setup). Click
   generates the completion script dynamically from whatever commands are registered, so it
@@ -44,8 +43,8 @@ class subclasses it and adds its own `env_prefix`:
   query), and on-disk paths for the JSON "database" and cached assets under
   `LEETCODE_DATA/dsa_problems/` — `problems.json`, `submissions.json`,
   `solved_slugs_cache.json`, `assets/`.
-- `modules/render/settings.py` — `RendererSettings`: template dir (`templates/` at the repo
-  root), default output dir (`LOCAL_RENDER/` in the project root), and an optional
+- `modules/render/settings.py` — `RendererSettings`: template dir (`resources/templates/` at
+  the repo root), default output dir (`LOCAL_RENDER/` in the project root), and an optional
   `OUTPUT_BASE_DIR` override (no `LEETCODE_` prefix — a different env var namespace than the
   leetcode settings). Base-dir resolution priority, via `RendererSettings.resolve_base_dir()`:
   a CLI `--output-base` > `OUTPUT_BASE_DIR` (.env) > `DEFAULT_WRITE_DIR`. Point
@@ -63,9 +62,12 @@ When adding a new module that needs config, follow this same pattern: subclass
 
 ## Architecture: three-part resumable sync pipeline
 
-The core design is in `modules/leetcode/pipeline.py` (`LeetCodeSyncManager`). Fetching data
-for one solved problem is split into three independent, idempotent, individually-resumable
-parts, because LeetCode API calls are slow/rate-limited and a full sync can be interrupted:
+The core design is in `modules/sync/pipeline.py` (`LeetCodeSyncManager`) — the orchestration
+layer, kept separate from `modules/leetcode/` (the data layer it coordinates: client, storage,
+parsers, image processing) so the "what to fetch and when" logic doesn't sit flat alongside the
+low-level primitives it depends on. Fetching data for one solved problem is split into three
+independent, idempotent, individually-resumable parts, because LeetCode API calls are
+slow/rate-limited and a full sync can be interrupted:
 
 1. **description** — `populate_question_metadata`: fetches problem metadata + description HTML
    via GraphQL, converts it to plain text and Markdown.
@@ -122,6 +124,18 @@ directly instead (CLI: `problems data pending list/count/show`, vs. the always-l
   / `list_all_combined`).
 - `models.py` — pydantic models: `ProblemRecord` (the central per-problem record),
   `QuestionContent` (remote/local markdown+html+text variants), `SubmissionRecord`.
+- `recent_activity.py` — pure data transforms (`filter_today`, `dedupe_latest_per_slug`) over
+  the recentAcSubmissionList feed's parsed `{slug, title, timestamp}` dicts. Lives here rather
+  than in `modules/sync/` since it's plain data shaping, same category as `parsers/` — no
+  network/storage I/O, no orchestration.
+
+### Orchestration (`modules/sync/`)
+
+- `pipeline.py` — `LeetCodeSyncManager`, the three-part sync pipeline described above. The only
+  consumer of `modules/leetcode/`'s client/storage/image-processor/parsers/models together in
+  one place; nothing in `modules/leetcode/` imports back from here. `modules/cli/` only ever
+  reaches the LeetCode data layer through this manager (`cli/common.py::get_manager()`), never
+  by importing `modules/leetcode/` directly.
 
 ### AI prefill (`modules/ai_prefill/`)
 
@@ -149,7 +163,7 @@ version first (implies `--ai`).
 ### Rendering (`modules/render/`)
 
 `markdown_problem.py` (`LeetCodeDSAProblemMarkdownRender`) turns a `ProblemRecord`/
-`CombinedQuestionRecord` into a Markdown note via `templates/leetcode_problem.md.j2`, in one or
+`CombinedQuestionRecord` into a Markdown note via `resources/templates/leetcode_problem.md.j2`, in one or
 both of two variants (`modules/render/utils.py::FileVariant`):
 - `remote` — uses `content.remote_markdown` (hotlinked LeetCode image URLs)
 - `local` — uses `content.local_markdown` (rewritten to the locally-downloaded image paths)

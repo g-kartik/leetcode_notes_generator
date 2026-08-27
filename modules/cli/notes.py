@@ -28,7 +28,7 @@ import structlog
 
 from modules.ai_prefill import AIPrefillGenerator, AIProviderError, PrefillGenerationError
 from modules.ai_prefill.settings import ai_prefill_settings
-from modules.leetcode.pipeline import LeetCodeSyncManager
+from modules.sync.pipeline import LeetCodeSyncManager
 from modules.render.markdown_notes import LeetCodeDSAProblemNotesRender
 from modules.render.markdown_problem import LeetCodeDSAProblemMarkdownRender
 from modules.render.settings import render_settings

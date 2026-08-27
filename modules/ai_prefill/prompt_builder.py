@@ -11,7 +11,7 @@ from .settings import ai_prefill_settings
 class PrefillPromptBuilder:
     """
     Loads the system/user prompt templates from AI_PREFILL_PROMPTS_DIR
-    (prompts/ai_prefill/*.txt by default) and fills them in for one problem.
+    (resources/prompts/ai_prefill/*.txt by default) and fills them in for one problem.
 
     Kept separate from the provider layer so prompt wording can be tuned by
     editing text files, not Python — and separate from schema.py so the

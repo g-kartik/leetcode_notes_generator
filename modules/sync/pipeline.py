@@ -1,12 +1,11 @@
 import structlog
 
+from modules.leetcode import parsers
+from modules.leetcode.client import LeetCodeClient
+from modules.leetcode.image_processor import LeetCodeImageProcessor
 from modules.leetcode.models import ProblemRecord, SubmissionRecord
-
-from . import parsers
-from .client import LeetCodeClient
-from .image_processor import LeetCodeImageProcessor
-from .recent_activity import dedupe_latest_per_slug, filter_today
-from .storage import LeetCodeDSAStorage
+from modules.leetcode.recent_activity import dedupe_latest_per_slug, filter_today
+from modules.leetcode.storage import LeetCodeDSAStorage
 
 logger = structlog.get_logger(__name__)
 

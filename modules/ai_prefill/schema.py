@@ -3,8 +3,8 @@ from pydantic import BaseModel, Field
 
 class PrefillContent(BaseModel):
     """AI-generated draft content mapping onto the notes template's prefillable
-    sections (see templates/leetcode_notes_plain.md.j2). This is the schema
-    handed to the AI provider and validated against on the way back."""
+    sections (see resources/templates/leetcode_notes_plain.md.j2). This is the
+    schema handed to the AI provider and validated against on the way back."""
 
     problem_summary: str = ""
     pattern: list[str] = Field(default_factory=list)
