@@ -1,6 +1,7 @@
 """
 CLI command implementations for the LeetCode notes generator, split by area:
-problems (data fetch + pending cache, db, render, recent), notes, solve.
+problems (data fetch + pending cache, db, render, recent), notes (the
+everyday fetch -> render pipeline, plus standalone AI prefill generation).
 Importing this package registers every subcommand onto the root `cli` group
 defined in `root.py`.
 """
@@ -14,7 +15,6 @@ from . import (  # noqa: F401  (side effect: registers commands onto `cli`)
     problems_db,
     problems_recent,
     problems_render,
-    solve,
 )
 
 __all__ = ["cli"]

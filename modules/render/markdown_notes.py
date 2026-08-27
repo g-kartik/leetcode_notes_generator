@@ -186,9 +186,9 @@ class LeetCodeDSAProblemNotesRender:
     def _backup_dir(self, record: CombinedQuestionRecord) -> Path:
         """
         <output_base>/Leetcode Notes/backups/<id>-<slug>/ — one subfolder per
-        problem, since repeated --force runs can accumulate multiple backups
-        and dumping every problem's backups into one shared folder would make
-        them hard to tell apart.
+        problem, since repeated --replace-existing runs can accumulate
+        multiple backups and dumping every problem's backups into one shared
+        folder would make them hard to tell apart.
         """
         return (
             notes_root(self.output_base)
@@ -209,7 +209,7 @@ class LeetCodeDSAProblemNotesRender:
         return backup_file
 
     def save(
-        self, record: CombinedQuestionRecord, force: bool = False
+        self, record: CombinedQuestionRecord, replace_existing: bool = False
     ) -> tuple[Path, str]:
         """
         Renders and saves the (single, style-agnostic) notes file for `record`
@@ -219,8 +219,9 @@ class LeetCodeDSAProblemNotesRender:
         A notes file is meant to be hand-edited after generation (pattern, core
         idea, invariant, trap, ...), so an existing file is never silently
         overwritten: by default, this is a no-op if the file already exists.
-        Pass force=True to regenerate anyway — the existing file is copied into
-        its per-problem backup folder (timestamped) first, so nothing is lost.
+        Pass replace_existing=True to regenerate anyway — the existing file is
+        copied into its per-problem backup folder (timestamped) first, so
+        nothing is lost.
 
         Returns (path, status) where status is "written" or "skipped".
         """
@@ -231,12 +232,13 @@ class LeetCodeDSAProblemNotesRender:
         output_file = notes_dir / sanitized_filename(record.id, record.title)
 
         if output_file.exists():
-            if not force:
+            if not replace_existing:
                 log.info(
                     "notes_save_skipped",
                     reason="notes_file_already_exists",
                     path=str(output_file),
-                    hint="pass force=True (--force) to regenerate; the existing file is backed up first",
+                    hint="pass replace_existing=True (--replace-existing) to regenerate; "
+                    "the existing file is backed up first",
                 )
                 return output_file, "skipped"
             self._backup_existing_note(output_file, record, log)

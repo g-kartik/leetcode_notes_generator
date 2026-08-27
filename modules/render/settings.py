@@ -15,6 +15,11 @@ class RendererSettings(BaseProjectSettings):
     # always wins over this; this is the fallback checked before DEFAULT_WRITE_DIR.
     OUTPUT_BASE_DIR: Path | None = None
 
+    # Default `--style` for `notes render` ("plain" or "obsidian"), so it
+    # doesn't have to be typed on every invocation. A CLI --style always wins
+    # over this.
+    DEFAULT_NOTES_STYLE: str = "plain"
+
     @field_validator("OUTPUT_BASE_DIR", mode="before")
     @classmethod
     def _blank_to_none(cls, value: str | None) -> str | None:

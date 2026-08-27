@@ -50,7 +50,9 @@ class subclasses it and adds its own `env_prefix`:
   leetcode settings). Base-dir resolution priority, via `RendererSettings.resolve_base_dir()`:
   a CLI `--output-base` > `OUTPUT_BASE_DIR` (.env) > `DEFAULT_WRITE_DIR`. Point
   `OUTPUT_BASE_DIR` at (a folder inside) an Obsidian vault to have problems/notes render
-  straight into it — there's no separate vault-mirroring mechanism.
+  straight into it — there's no separate vault-mirroring mechanism. `DEFAULT_NOTES_STYLE`
+  (`plain` or `obsidian`) sets the default for `notes render --style`, same override priority
+  (CLI `--style` > `DEFAULT_NOTES_STYLE` (.env) > `"plain"`).
 - `modules/ai_prefill/settings.py` — `AIPrefillSettings` (`env_prefix="AI_PREFILL_"`): which
   `AIProvider` to use (`PROVIDER`, default `claude_code` — shells out to `claude -p`, billed
   against the Claude Code subscription; `command` is a generic escape hatch for any other CLI
@@ -76,7 +78,10 @@ parts, because LeetCode API calls are slow/rate-limited and a full sync can be i
 
 Each `populate_*` method is a no-op if its data already exists, unless `force_update=True`.
 The CLI exposes these as `problems data fetch --part {description,images,submission,full}
-[SLUG]` (`full`, the default, runs all three in order).
+[SLUG]` (`full`, the default, runs all three in order; the CLI's own `--refetch` flag maps to
+`force_update`). `notes render [SLUG]` also runs this full three-part fetch itself (each part
+still a no-op if already populated) before rendering, so it never requires a separate fetch step
+first — see CLI below.
 
 Progress is tracked in a small separate JSON cache (`solved_slugs_cache.json`, managed by
 `LeetCodeDSAStorage`) mapping `slug -> {description, images, submission: bool}`. A slug is
@@ -136,8 +141,10 @@ pluggable CLI AI tool, instead of leaving it fully blank for hand-writing.
   history (oldest first) — re-running generation appends a new version rather than overwriting,
   so nothing is ever silently lost.
 
-CLI: `notes prefill [SLUG]` generates content; `notes render --ai` (or `solve --ai`) pulls the
-latest version in when rendering the notes file.
+CLI: `notes prefill [SLUG]` generates content standalone (`--regenerate` to add another version
+even if one exists). `notes render --ai` pulls the latest stored version in when rendering the
+notes file, generating one first if none exists yet; `--regenerate-ai` always generates a fresh
+version first (implies `--ai`).
 
 ### Rendering (`modules/render/`)
 
@@ -152,8 +159,9 @@ both of two variants (`modules/render/utils.py::FileVariant`):
 file per problem — frontmatter (tags = personal pattern tags + LeetCode topic-tag slugs,
 deduped) plus a link back to the rendered problem/solution file(s); the content sections
 (pattern, core idea, invariant, trap, ...) are left blank by default, or filled from the latest
-AI prefill content when rendered with `--ai` (see AI prefill above — raises `PrefillMissingError`,
-surfaced by the CLI as a clear error, if no prefill exists yet for that slug). Two base styles
+AI prefill content when rendered with `--ai` (see AI prefill above — the CLI's `notes render`
+generates prefill content on demand if none exists yet, so `PrefillMissingError` is only ever
+raised by lower-level, direct use of `LeetCodeDSAProblemNotesRender.render()`). Two base styles
 (`modules/render/utils.py::NotesStyle`: `plain`, `obsidian`), each with a `+ai` variant
 (`AI_STYLE` in the same module maps base -> `+ai`) — the CLI exposes these as independent
 `--style {plain,obsidian}` + `--ai` flags rather than four separate style choices. `obsidian`
@@ -170,17 +178,25 @@ Both renderers write under one resolved base directory (`RendererSettings.resolv
 <base>/Leetcode Notes/<file>.md
 ```
 There's one notes file per problem regardless of style — regenerating with a different
-`--style`/`--ai` overwrites it (backing up the previous version first — see `--force` below)
-rather than creating a separate file.
+`--style`/`--ai` overwrites it (backing up the previous version first — see `--replace-existing`
+below) rather than creating a separate file.
 
 ### CLI (`modules/cli/`, entrypoint `cli.py`)
 
 `root.py` defines the bare `cli` click group (plus `-H`/`--help-all`, the recursive help
 described above); every other module in this package registers commands onto it as a side
 effect of being imported by `modules/cli/__init__.py`. Every batch (`--all`) command shares
-`common.py`'s `CircuitBreaker` (abort after N consecutive failures) and `BatchPacer` (randomized
-cooldown every N slugs) so a large run doesn't look like abusive traffic; commands invoked with
-neither `SLUG` nor `--all` fall back to `picker.py`'s fuzzy multi-select instead of erroring.
+`common.py`'s `CircuitBreaker` (abort after N consecutive failures) and (in `problems_data.py`)
+`BatchPacer` (randomized cooldown every N slugs) so a large run doesn't look like abusive
+traffic; commands invoked with neither `SLUG` nor `--all` fall back to `picker.py`'s fuzzy
+multi-select instead of erroring.
+
+Flags that regenerate/replace something are named after what they do rather than a bare
+`--force`, since the effect differs by command: `--refetch` (`problems data fetch`, re-hits the
+network for a part that's already stored), `--replace-existing` (`notes render`, backs up and
+overwrites an existing notes file), `--regenerate`/`--regenerate-ai` (`notes prefill` / `notes
+render`, appends a new AI prefill version — prior versions are never overwritten), and
+`--skip-confirm` (`problems delete`, skips the destructive-action confirmation prompt).
 
 - `problems.py` — the `problems` group itself (fetch/store/render problem data).
 - `problems_data.py` — `problems data fetch` (the merged `--part` command described above) and
@@ -190,10 +206,18 @@ neither `SLUG` nor `--all` fall back to `picker.py`'s fuzzy multi-select instead
 - `problems_render.py` — `problems render [SLUG]` (the Markdown problem file).
 - `problems_recent.py` — `problems recent` (read-only report of LeetCode's recent-accepted feed;
   shows the full ~20-item batch by default, `--today` narrows it to local-time today).
-- `notes.py` — `notes render` / `notes prefill`.
-- `solve.py` — `solve [SLUG]`, the "I just solved this" one-shot: fetch (all three parts) ->
-  render problem -> optionally generate AI prefill -> render notes, chained for one or more
-  slugs.
+- `notes.py` — the everyday entrypoint. `notes render [SLUG]` fetches whatever's missing for that
+  slug (all three parts — a no-op for anything already stored), renders the problem file,
+  optionally generates/uses AI prefill content (`--ai`/`--regenerate-ai`), and renders the
+  notes file; this is the former `solve` command's pipeline, now folded in here rather than kept
+  as a separate top-level command. Omit `SLUG` for an interactive multi-select, or pass `--all`
+  to run every known slug non-interactively. `--recent`/`--today` scope that batch (interactive
+  or `--all`) to LeetCode's recent-accepted-submissions feed instead of the local slug set,
+  syncing from LeetCode first (`LeetCodeSyncManager.sync_pending_cache()`) so brand-new slugs and
+  resubmits are picked up before rendering — a resubmit's problem file is re-rendered for free as
+  part of the same per-slug pipeline, since `populate_submission_code` already refetches
+  automatically once the pending cache reopens that part. `notes prefill [SLUG]` remains a
+  standalone way to generate AI prefill content without rendering anything yet.
 
 ### Logging
 

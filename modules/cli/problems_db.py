@@ -96,16 +96,16 @@ def _delete_one(mgr, slug: str) -> bool:
 
 @problems.command("delete")
 @click.argument("slug", required=False)
-@click.option("--force", is_flag=True, help="Skip the confirmation prompt.")
-def problems_delete(slug: str | None, force: bool) -> None:
+@click.option("--skip-confirm", is_flag=True, help="Skip the confirmation prompt.")
+def problems_delete(slug: str | None, skip_confirm: bool) -> None:
     """Delete one or more stored question records (problem + submission).
-    Destructive — asks to confirm unless --force. Omit SLUG to pick
+    Destructive — asks to confirm unless --skip-confirm. Omit SLUG to pick
     interactively instead — a searchable, multi-select prompt over every
     stored slug."""
     mgr = get_manager()
 
     if slug:
-        if not force:
+        if not skip_confirm:
             click.confirm(f"Delete '{slug}' from the database? This cannot be undone.", abort=True)
         if not _delete_one(mgr, slug):
             raise click.ClickException(f"'{slug}' not found in the database.")
@@ -115,7 +115,7 @@ def problems_delete(slug: str | None, force: bool) -> None:
     slugs = _pick_stored_slugs(mgr)
     if not slugs:
         return
-    if not force:
+    if not skip_confirm:
         click.echo(f"About to delete {len(slugs)} slug(s): {', '.join(slugs)}")
         click.confirm("This cannot be undone. Continue?", abort=True)
 

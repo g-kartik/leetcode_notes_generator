@@ -57,18 +57,18 @@ def _is_populated(mgr: LeetCodeSyncManager, part_name: str, slug: str) -> bool:
     return found
 
 
-def _run_part_for_slug(mgr: LeetCodeSyncManager, part_name: str, slug: str, force: bool) -> str:
+def _run_part_for_slug(mgr: LeetCodeSyncManager, part_name: str, slug: str, refetch: bool) -> str:
     """Runs one pipeline part for one slug. Returns 'skipped', 'success', or 'failed'."""
     with structlog.contextvars.bound_contextvars(slug=slug, stage=part_name):
         log = logger.bind()
 
-        if not force and _is_populated(mgr, part_name, slug):
+        if not refetch and _is_populated(mgr, part_name, slug):
             log.info("part_fetch_skipped", reason="already_populated_using_stored_data")
             return "skipped"
 
-        log.info("part_fetch_started", force=force)
+        log.info("part_fetch_started", refetch=refetch)
         method = getattr(mgr, _PART_METHODS[part_name])
-        succeeded = method(slug, force_update=force)
+        succeeded = method(slug, force_update=refetch)
 
         status = "success" if succeeded else "failed"
         log.info("part_fetch_finished", status=status)
@@ -166,13 +166,13 @@ def _run_single_part(
     slug: str | None,
     run_all: bool,
     no_cache: bool,
-    force: bool,
+    refetch: bool,
     limit: int | None,
     max_failures: int,
     batch_size: int,
 ) -> None:
     if slug:
-        status = _run_part_for_slug(mgr, part_name, slug, force)
+        status = _run_part_for_slug(mgr, part_name, slug, refetch)
         click.echo(_describe(part_name, slug, status))
         if status == "failed":
             raise click.ClickException(f"could not fetch '{part_name}' for '{slug}' — no data returned")
@@ -196,7 +196,7 @@ def _run_single_part(
     pacer = BatchPacer(batch_size)
     total = len(slugs)
     for idx, target_slug in enumerate(slugs):
-        status = _run_part_for_slug(mgr, part_name, target_slug, force)
+        status = _run_part_for_slug(mgr, part_name, target_slug, refetch)
         click.echo(_describe(part_name, target_slug, status))
         buckets[status].append(target_slug)
 
@@ -223,7 +223,7 @@ def _run_full(
     slug: str | None,
     run_all: bool,
     no_cache: bool,
-    force: bool,
+    refetch: bool,
     limit: int | None,
     max_failures: int,
     batch_size: int,
@@ -231,7 +231,7 @@ def _run_full(
     if slug:
         failed_parts = []
         for part_name in _PART_ORDER:
-            status = _run_part_for_slug(mgr, part_name, slug, force)
+            status = _run_part_for_slug(mgr, part_name, slug, refetch)
             click.echo(_describe(part_name, slug, status))
             if status == "failed":
                 failed_parts.append(part_name)
@@ -258,7 +258,7 @@ def _run_full(
     for idx, target_slug in enumerate(slugs):
         slug_failed = False
         for part_name in _PART_ORDER:
-            status = _run_part_for_slug(mgr, part_name, target_slug, force)
+            status = _run_part_for_slug(mgr, part_name, target_slug, refetch)
             click.echo(_describe(part_name, target_slug, status))
             slug_failed = slug_failed or status == "failed"
         (failed if slug_failed else succeeded).append(target_slug)
@@ -305,7 +305,7 @@ def data() -> None:
     help="With --all, target every slug in the database instead of just cache-pending ones.",
 )
 @click.option(
-    "--force", is_flag=True,
+    "--refetch", is_flag=True,
     help="Refetch even if this part's data already exists.",
 )
 @click.option(
@@ -329,7 +329,7 @@ def data_fetch(
     part_name: str,
     run_all: bool,
     no_cache: bool,
-    force: bool,
+    refetch: bool,
     limit: int | None,
     max_failures: int,
     batch_size: int,
@@ -338,9 +338,9 @@ def data_fetch(
     _validate_target(slug, run_all, no_cache, limit)
     mgr = get_manager()
     if part_name == "full":
-        _run_full(mgr, slug, run_all, no_cache, force, limit, max_failures, batch_size)
+        _run_full(mgr, slug, run_all, no_cache, refetch, limit, max_failures, batch_size)
     else:
-        _run_single_part(mgr, part_name, slug, run_all, no_cache, force, limit, max_failures, batch_size)
+        _run_single_part(mgr, part_name, slug, run_all, no_cache, refetch, limit, max_failures, batch_size)
 
 
 # --------------------------------------------------------------------------- #

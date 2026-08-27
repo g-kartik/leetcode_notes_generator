@@ -1,5 +1,40 @@
 {
   "prefills": {
-
+    "add-binary": [
+      {
+        "generated_at": "2026-08-27T13:50:07.032733",
+        "provider": "claude_code",
+        "content": {
+          "problem_summary": "Given two binary strings `a` and `b`, compute their sum and return it as a binary string.",
+          "pattern": [
+            "two pointers",
+            "simulation"
+          ],
+          "core_idea": [
+            "Simulate elementary school addition from the least significant bit, walking `a` and `b` from the end with two pointers and prepending each result bit to a growing string.",
+            "Track a `carry` variable across iterations to propagate overflow from one bit position to the next, exactly like manual binary addition."
+          ],
+          "invariant": [
+            "At the start of each loop iteration, `carry` correctly represents the carry-out from all bit positions already processed (i.e., positions to the right of `a_ptr`/`b_ptr`).",
+            "`binary_sum` always holds the correctly computed suffix of the final answer for the bits already consumed."
+          ],
+          "trap": [
+            "After the main loop ends, one of `a` or `b` may still have remaining higher-order bits that still need the carry applied — easy to forget and drop digits.",
+            "A leftover `carry == 1` after all digits are consumed must be prepended as an extra leading `'1'`.",
+            "Building the result by prepending (`binary_sum = bit + binary_sum`) is O(n) per operation in Python, making the whole solution O(n^2) instead of O(n)."
+          ],
+          "recognition_clue": [
+            "Two sequences of digits/characters that must be combined arithmetically from the least significant end with carry propagation → process from the back with two pointers and a carry variable.",
+            "Different-length strings representing numbers → main pairwise loop plus two separate cleanup loops (or a single loop using `0` as a default digit) to flush the longer string's remaining digits."
+          ],
+          "complexity_time": "O(n^2)",
+          "complexity_space": "O(n)",
+          "takeaway": [
+            "Carry-based digit-by-digit simulation generalizes to any base (binary, decimal, hex) addition problem — the pattern is: pointers from the end, per-digit sum with carry, then flush leftover digits from the longer operand.",
+            "When building a string result by repeated prepending, prefer appending and reversing (or using a list + join) at the end to avoid the hidden O(n) cost of each prepend."
+          ]
+        }
+      }
+    ]
   }
 }
