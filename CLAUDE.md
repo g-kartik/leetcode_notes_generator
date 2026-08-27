@@ -32,10 +32,15 @@ pluggable AI provider. Driven by a `click`-based CLI (`cli.py`).
 
 ## Configuration
 
-Settings are `pydantic-settings` classes reading from a single root `.env` file
-(see `.env.example` for required keys). `settings.py` (repo root) defines
-`BaseProjectSettings`, which just fixes `PROJECT_ROOT_DIR`. Every module-level settings
-class subclasses it and adds its own `env_prefix`:
+Settings are `pydantic-settings` classes reading from two root env files, loaded in order
+with later values winning: `.env.defaults` (committed — every non-secret setting's shipped
+default) then `.env` (gitignored — real secrets, i.e. `LEETCODE_SESSION`/`LEETCODE_CSRF_TOKEN`,
+plus any personal override of a default; see `.env.example` for what to copy into it).
+`settings.py` (repo root) defines `BaseProjectSettings`, which fixes `PROJECT_ROOT_DIR` and
+that `env_file` tuple. Every module-level settings class subclasses it and adds its own
+`env_prefix` — each one that redeclares `model_config` to do so must repeat the `env_file`
+tuple too, since pydantic merges `model_config` per-key across the class hierarchy rather than
+composing a subclass's dict with its parent's:
 
 - `modules/leetcode/settings.py` — `LeetCodeSettings` (`env_prefix="LEETCODE_"`): auth
   (`SESSION`, `CSRF_TOKEN` cookies copied from an authenticated browser session against
