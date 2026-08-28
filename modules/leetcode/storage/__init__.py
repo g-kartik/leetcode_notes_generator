@@ -4,6 +4,7 @@ from modules.leetcode.models import ProblemRecord, SubmissionRecord
 
 from .cache import PendingCacheStore
 from .combined import CombinedQuestionRecord
+from .db import get_connection
 from .problems import ProblemStorage
 from .submissions import SubmissionStorage
 
@@ -16,10 +17,13 @@ class LeetCodeDSAStorage:
     """
     Facade over the problem store, submission store, and pending-parts cache.
 
-    Problem data (community/public, safe to export) and submission data
-    (personal, never exported) are persisted to separate JSON files by
-    construction — see ProblemStorage and SubmissionStorage. Each store's
-    CRUD is exposed here under a `problems_*` / `submissions_*` prefix.
+    All three share one leetcode.db SQLite connection (see db.py). Problem
+    data (community/public, safe to export — the `problems`/`tags`/
+    `problem_tags` tables) and submission data (personal, never exported —
+    the `submissions` table) are still kept in separate tables by
+    construction, same boundary as before, just tables instead of separate
+    JSON files now. Each store's CRUD is exposed here under a `problems_*` /
+    `submissions_*` prefix.
 
     A small set of unprefixed methods is kept for backward compatibility
     with existing callers and operates on the problems store only. Callers
@@ -31,9 +35,10 @@ class LeetCodeDSAStorage:
     CACHE_PARTS = PendingCacheStore.CACHE_PARTS
 
     def __init__(self):
-        self.problems = ProblemStorage()
-        self.submissions = SubmissionStorage()
-        self.cache = PendingCacheStore()
+        self.conn = get_connection()
+        self.problems = ProblemStorage(self.conn)
+        self.submissions = SubmissionStorage(self.conn)
+        self.cache = PendingCacheStore(self.conn)
 
     # -------------------------------------------------------------------
     # Combined view (the only place problems + submissions are joined)

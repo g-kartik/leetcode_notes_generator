@@ -1,4 +1,4 @@
-import json
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 
@@ -10,6 +10,17 @@ from .settings import ai_prefill_settings
 
 logger = structlog.get_logger(__name__)
 
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS prefill_versions (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug         TEXT NOT NULL,
+    generated_at TEXT NOT NULL,
+    provider     TEXT NOT NULL,
+    content      TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_prefill_slug ON prefill_versions(slug);
+"""
+
 
 class PrefillVersion(BaseModel):
     generated_at: datetime
@@ -19,12 +30,12 @@ class PrefillVersion(BaseModel):
 
 class AIPrefillStorage:
     """
-    JSON-backed store for AI-generated prefill content, keyed by slug ->
-    list of versions (oldest first). Kept as its own file (ai_prefill.json),
-    separate from problems.json/submissions.json, since this data is
-    regenerable and optional — it's not part of the sync pipeline's
-    idempotency model, and deleting it never loses anything the pipeline
-    can't reconstruct by generating again.
+    SQLite-backed store for AI-generated prefill content (the
+    `prefill_versions` table), keyed by slug -> list of versions (oldest
+    first). Kept in its own file (ai_prefill.db), separate from leetcode.db,
+    since this data is regenerable and optional — it's not part of the sync
+    pipeline's idempotency model, and deleting it never loses anything the
+    pipeline can't reconstruct by generating again.
 
     Re-running generation for an already-prefilled slug appends a new
     version rather than overwriting the previous one, since the user may
@@ -32,58 +43,51 @@ class AIPrefillStorage:
     """
 
     def __init__(self, db_path: Path | None = None):
-        self.db_path = db_path or ai_prefill_settings.PREFILL_JSON_DB
+        self.db_path = db_path or ai_prefill_settings.PREFILL_DB_PATH
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._ensure_db_exists()
+        self.conn = sqlite3.connect(self.db_path)
+        self.conn.row_factory = sqlite3.Row
+        self.conn.execute("PRAGMA journal_mode = WAL")
+        self.conn.executescript(SCHEMA)
+        self.conn.commit()
 
-    def _ensure_db_exists(self) -> None:
-        if not self.db_path.exists():
-            logger.info("ai_prefill_db_initialized", path=str(self.db_path))
-            self._save_raw({"prefills": {}})
-
-    def _load_raw(self) -> dict:
-        try:
-            with open(self.db_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, FileNotFoundError) as exc:
-            logger.warning(
-                "ai_prefill_db_load_failed_using_empty",
-                path=str(self.db_path),
-                error=str(exc),
-            )
-            return {"prefills": {}}
-
-    def _save_raw(self, data: dict) -> None:
-        """Atomic write: writes to a temporary file first, then replaces target file."""
-        temp_path = self.db_path.with_suffix(".tmp")
-        with open(temp_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        temp_path.replace(self.db_path)
+    @staticmethod
+    def _row_to_version(row: sqlite3.Row) -> PrefillVersion:
+        return PrefillVersion(
+            generated_at=row["generated_at"],
+            provider=row["provider"],
+            content=PrefillContent.model_validate_json(row["content"]),
+        )
 
     def add_version(self, slug: str, *, provider: str, content: PrefillContent) -> PrefillVersion:
         """Appends a new version for `slug`. Existing versions are never overwritten or dropped."""
         version = PrefillVersion(generated_at=datetime.now(), provider=provider, content=content)
-        data = self._load_raw()
-        data["prefills"].setdefault(slug, []).append(version.model_dump(mode="json"))
-        self._save_raw(data)
-        logger.bind(slug=slug).info(
-            "ai_prefill_version_saved",
-            provider=provider,
-            version_count=len(data["prefills"][slug]),
-        )
+        with self.conn:
+            self.conn.execute(
+                "INSERT INTO prefill_versions (slug, generated_at, provider, content) VALUES (?, ?, ?, ?)",
+                (slug, version.generated_at.isoformat(), version.provider, version.content.model_dump_json()),
+            )
+        count = self.version_count(slug)
+        logger.bind(slug=slug).info("ai_prefill_version_saved", provider=provider, version_count=count)
         return version
 
     def list_versions(self, slug: str) -> list[PrefillVersion]:
         """Returns every stored version for `slug`, oldest first. Empty list if none exist."""
-        data = self._load_raw()
-        return [PrefillVersion(**v) for v in data["prefills"].get(slug, [])]
+        rows = self.conn.execute(
+            "SELECT * FROM prefill_versions WHERE slug = ? ORDER BY id", (slug,)
+        ).fetchall()
+        return [self._row_to_version(row) for row in rows]
 
     def latest(self, slug: str) -> PrefillVersion | None:
-        versions = self.list_versions(slug)
-        return versions[-1] if versions else None
+        row = self.conn.execute(
+            "SELECT * FROM prefill_versions WHERE slug = ? ORDER BY id DESC LIMIT 1", (slug,)
+        ).fetchone()
+        return self._row_to_version(row) if row else None
 
     def version_count(self, slug: str) -> int:
-        return len(self._load_raw()["prefills"].get(slug, []))
+        return self.conn.execute(
+            "SELECT COUNT(*) AS c FROM prefill_versions WHERE slug = ?", (slug,)
+        ).fetchone()["c"]
 
     def exists(self, slug: str) -> bool:
         return self.version_count(slug) > 0

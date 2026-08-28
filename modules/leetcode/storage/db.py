@@ -1,0 +1,78 @@
+import sqlite3
+
+import structlog
+
+from modules.leetcode.settings import leetcode_settings
+
+logger = structlog.get_logger(__name__)
+
+# All four tables live in one file (leetcode_settings.DSA_DB_PATH) since
+# they're always used together and joined constantly (problems+tags for
+# filtering, problems+submissions for rendering). submissions.slug is
+# deliberately a plain column, not a FOREIGN KEY: ProblemStorage.delete()
+# leaves a slug's submission data untouched by design, and a real FK would
+# either block that delete or force an ON DELETE CASCADE that changes it.
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS problems (
+    slug                     TEXT PRIMARY KEY,
+    id                       INTEGER UNIQUE,
+    title                    TEXT,
+    url                      TEXT,
+    difficulty               TEXT,
+    category                 TEXT,
+    raw_question_html        TEXT,
+    has_images               INTEGER,
+    imgs_local_paths         TEXT,
+    content_remote_markdown  TEXT,
+    content_local_html       TEXT,
+    content_local_markdown   TEXT,
+    content_text             TEXT
+);
+
+CREATE TABLE IF NOT EXISTS tags (
+    id   INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS problem_tags (
+    problem_slug TEXT NOT NULL REFERENCES problems(slug) ON DELETE CASCADE,
+    tag_id       INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    PRIMARY KEY (problem_slug, tag_id)
+);
+CREATE INDEX IF NOT EXISTS idx_problem_tags_tag_id ON problem_tags(tag_id);
+
+CREATE TABLE IF NOT EXISTS submissions (
+    slug            TEXT PRIMARY KEY,
+    lang            TEXT NOT NULL,
+    code            TEXT NOT NULL,
+    submission_date TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS pending_cache (
+    slug        TEXT PRIMARY KEY,
+    description INTEGER NOT NULL DEFAULT 0,
+    images      INTEGER NOT NULL DEFAULT 0,
+    submission  INTEGER NOT NULL DEFAULT 0
+);
+"""
+
+
+def get_connection() -> sqlite3.Connection:
+    """
+    Opens the shared leetcode.db connection: WAL mode (so a read doesn't
+    block a concurrent write), foreign keys enforced, row_factory set so
+    query results can be accessed by column name, and the full schema
+    applied idempotently. Creates the file and its parent directory on
+    first use.
+    """
+    path = leetcode_settings.DSA_DB_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(path)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA journal_mode = WAL")
+    conn.executescript(SCHEMA)
+    conn.commit()
+    logger.info("leetcode_db_connected", path=str(path))
+    return conn

@@ -1,46 +1,41 @@
-import json
+import sqlite3
 
 import structlog
 
 from modules.leetcode.models import SubmissionRecord
-from modules.leetcode.settings import leetcode_settings
+
+from .db import get_connection
 
 logger = structlog.get_logger(__name__)
 
 
 class SubmissionStorage:
-    """JSON-backed CRUD for SubmissionRecord data (submissions.json).
+    """SQLite-backed CRUD for SubmissionRecord data (the `submissions` table in leetcode.db).
 
     Personal solution data only (language, code, submission date) — kept in
-    its own file, separate from problems.json, and never exported.
+    its own table, deliberately without a foreign key to `problems` (see
+    db.py), and never exported.
     """
 
-    def __init__(self):
-        self.db_path = leetcode_settings.DSA_SUBMISSIONS_JSON_DB
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._ensure_db_exists()
+    def __init__(self, conn: sqlite3.Connection | None = None):
+        self.conn = conn or get_connection()
 
-    def _ensure_db_exists(self) -> None:
-        """Initializes an empty JSON structure if the file doesn't exist."""
-        if not self.db_path.exists():
-            logger.info("submissions_db_initialized", path=str(self.db_path))
-            self._save_raw({"submissions": {}})
+    def _upsert_one(self, record: SubmissionRecord) -> None:
+        self.conn.execute(
+            "INSERT INTO submissions (slug, lang, code, submission_date) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(slug) DO UPDATE SET "
+            "lang = excluded.lang, code = excluded.code, submission_date = excluded.submission_date",
+            (record.slug, record.lang, record.code, record.submission_date.isoformat()),
+        )
 
-    def _load_raw(self) -> dict:
-        """Reads raw JSON from disk."""
-        try:
-            with open(self.db_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, FileNotFoundError) as exc:
-            logger.warning("submissions_db_load_failed_using_empty", path=str(self.db_path), error=str(exc))
-            return {"submissions": {}}
-
-    def _save_raw(self, data: dict) -> None:
-        """Atomic write: writes to a temporary file first, then replaces target file."""
-        temp_path = self.db_path.with_suffix(".tmp")
-        with open(temp_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        temp_path.replace(self.db_path)
+    @staticmethod
+    def _row_to_record(row: sqlite3.Row) -> SubmissionRecord:
+        return SubmissionRecord(
+            slug=row["slug"],
+            lang=row["lang"],
+            code=row["code"],
+            submission_date=row["submission_date"],
+        )
 
     # -------------------------------------------------------------------
     # CRUD Operations
@@ -54,53 +49,59 @@ class SubmissionStorage:
             raise ValueError("submission record must have a slug")
 
         log = logger.bind(slug=record.slug)
-        data = self._load_raw()
-        data["submissions"][record.slug] = record.model_dump(mode="json")
-        self._save_raw(data)
+        with self.conn:
+            self._upsert_one(record)
         log.info("submission_record_saved", lang=record.lang)
         return record
 
     def bulk_add_or_update(self, records: list[SubmissionRecord | dict]) -> int:
-        """Batch inserts multiple submissions using slug as keys in a single disk I/O."""
-        data = self._load_raw()
+        """Batch inserts multiple submissions using slug as keys in a single transaction."""
         count = 0
-        for item in records:
-            record = (
-                item if isinstance(item, SubmissionRecord) else SubmissionRecord(**item)
-            )
-            if not record.slug:
-                raise ValueError("submission record must have a slug")
-            data["submissions"][record.slug] = record.model_dump(mode="json")
-            count += 1
-        self._save_raw(data)
+        with self.conn:
+            for item in records:
+                record = (
+                    item
+                    if isinstance(item, SubmissionRecord)
+                    else SubmissionRecord(**item)
+                )
+                if not record.slug:
+                    raise ValueError("submission record must have a slug")
+                self._upsert_one(record)
+                count += 1
         logger.info("submissions_bulk_saved", count=count)
         return count
 
     def get_by_slug(self, slug: str) -> SubmissionRecord | None:
-        """Fetches a single submission record by slug ($O(1)$ lookup)."""
+        """Fetches a single submission record by slug."""
         log = logger.bind(slug=slug)
-        data = self._load_raw()
-        raw_record = data["submissions"].get(slug)
-        if raw_record is None:
+        row = self.conn.execute(
+            "SELECT * FROM submissions WHERE slug = ?", (slug,)
+        ).fetchone()
+        if row is None:
             log.info("submission_record_not_found")
             return None
-        log.info("submission_record_found", lang=raw_record.get("lang"))
-        return SubmissionRecord(**raw_record)
+        log.info("submission_record_found", lang=row["lang"])
+        return self._row_to_record(row)
 
     def exists(self, slug: str) -> bool:
         """Checks if a submission exists for `slug`."""
-        data = self._load_raw()
-        found = slug in data["submissions"]
+        found = (
+            self.conn.execute(
+                "SELECT 1 FROM submissions WHERE slug = ?", (slug,)
+            ).fetchone()
+            is not None
+        )
         logger.bind(slug=slug).info("submission_exists_check", exists=found)
         return found
 
     def delete(self, slug: str) -> bool:
         """Deletes a submission record by slug. Returns True if deleted."""
         log = logger.bind(slug=slug)
-        data = self._load_raw()
-        if slug in data["submissions"]:
-            del data["submissions"][slug]
-            self._save_raw(data)
+        with self.conn:
+            cursor = self.conn.execute(
+                "DELETE FROM submissions WHERE slug = ?", (slug,)
+            )
+        if cursor.rowcount:
             log.info("submission_record_deleted")
             return True
         log.info("submission_record_delete_skipped", reason="not_found")
@@ -108,14 +109,15 @@ class SubmissionStorage:
 
     def list_all(self) -> list[SubmissionRecord]:
         """Returns all stored submission records."""
-        data = self._load_raw()
-        records = [SubmissionRecord(**raw) for raw in data["submissions"].values()]
+        rows = self.conn.execute("SELECT * FROM submissions").fetchall()
+        records = [self._row_to_record(row) for row in rows]
         logger.info("submissions_listed", count=len(records))
         return records
 
     def count(self) -> int:
         """Returns total number of stored submissions."""
-        data = self._load_raw()
-        total = len(data["submissions"])
+        total = self.conn.execute("SELECT COUNT(*) AS c FROM submissions").fetchone()[
+            "c"
+        ]
         logger.info("submissions_counted", count=total)
         return total

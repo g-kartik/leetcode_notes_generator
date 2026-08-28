@@ -50,7 +50,10 @@ class AIPrefillSettings(BaseProjectSettings):
     PROMPTS_DIR: Path = BaseProjectSettings.PROJECT_ROOT_DIR / "resources" / "prompts" / "ai_prefill"
 
     DATA_STORAGE_DIR: Path = BaseProjectSettings.PROJECT_ROOT_DIR / "LEETCODE_DATA"
-    PREFILL_JSON_DB: Path = DATA_STORAGE_DIR / "dsa_problems" / "ai_prefill.json"
+    # Own SQLite file, deliberately separate from leetcode.db — this data is
+    # regenerable and optional, not part of the sync pipeline's idempotency
+    # model (see modules/ai_prefill/storage.py).
+    PREFILL_DB_PATH: Path = DATA_STORAGE_DIR / "dsa_problems" / "ai_prefill.db"
 
     def command_argv(self) -> list[str]:
         """Splits COMMAND into an argv list for the generic 'command' provider."""

@@ -39,9 +39,9 @@ class LeetCodeSettings(BaseProjectSettings):
     DATA_STORAGE_DIR: Path = BaseProjectSettings.PROJECT_ROOT_DIR / "LEETCODE_DATA"
     PROBLEMS_DATA_DIR: Path = DATA_STORAGE_DIR / "dsa_problems"
 
-    DSA_PROBLEMS_JSON_DB: Path = PROBLEMS_DATA_DIR / "problems.json"
-    DSA_SUBMISSIONS_JSON_DB: Path = PROBLEMS_DATA_DIR / "submissions.json"
-    DSA_PROBLEMS_CACHE_JSON_DB: Path = PROBLEMS_DATA_DIR / "solved_slugs_cache.json"
+    # Single SQLite file backing problems/tags/submissions/pending_cache —
+    # see modules/leetcode/storage/db.py for the schema and connection setup.
+    DSA_DB_PATH: Path = PROBLEMS_DATA_DIR / "leetcode.db"
     DSA_PROBLEMS_ASSETS_DIR: Path = PROBLEMS_DATA_DIR / "assets"
 
     # Non-DSA (Database/Shell/Concurrency/...) problem + submission records

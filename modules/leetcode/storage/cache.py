@@ -1,58 +1,46 @@
-import json
+import sqlite3
 
 import structlog
 
-from modules.leetcode.settings import leetcode_settings
+from .db import get_connection
 
 logger = structlog.get_logger(__name__)
 
 
 class PendingCacheStore:
     """
-    Solved-slugs pending cache.
+    Solved-slugs pending cache (the `pending_cache` table in leetcode.db).
 
     Tracks solved slugs that still need one or more of:
       description / images / submission
-    A slug is removed from the cache automatically once all three parts
-    are marked complete.
+    A slug's row is removed from the table automatically once all three
+    parts are marked complete.
     """
 
     CACHE_PARTS = ("description", "images", "submission")
 
-    def __init__(self):
-        self.cache_path = leetcode_settings.DSA_PROBLEMS_CACHE_JSON_DB
-        self.cache_path.parent.mkdir(parents=True, exist_ok=True)
-        self._ensure_cache_exists()
+    def __init__(self, conn: sqlite3.Connection | None = None):
+        self.conn = conn or get_connection()
 
-    def _ensure_cache_exists(self) -> None:
-        if not self.cache_path.exists():
-            logger.info("pending_cache_initialized", path=str(self.cache_path))
-            self._save_cache({})
+    def _validate_part(self, part: str) -> None:
+        if part not in self.CACHE_PARTS:
+            raise ValueError(f"Unknown part '{part}'. Must be one of {self.CACHE_PARTS}.")
 
-    def _load_cache(self) -> dict:
-        try:
-            with open(self.cache_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except (json.JSONDecodeError, FileNotFoundError) as exc:
-            logger.warning("pending_cache_load_failed_using_empty", path=str(self.cache_path), error=str(exc))
-            return {}
-
-    def _save_cache(self, data: dict) -> None:
-        """Atomic write for the cache file, same pattern as the JSON stores."""
-        temp_path = self.cache_path.with_suffix(".tmp")
-        with open(temp_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        temp_path.replace(self.cache_path)
+    @classmethod
+    def _row_to_dict(cls, row: sqlite3.Row) -> dict[str, bool]:
+        return {part: bool(row[part]) for part in cls.CACHE_PARTS}
 
     def read_pending_cache(self) -> dict[str, dict[str, bool]]:
         """Returns the full pending cache: {slug: {description, images, submission}}."""
-        cache = self._load_cache()
+        rows = self.conn.execute("SELECT * FROM pending_cache").fetchall()
+        cache = {row["slug"]: self._row_to_dict(row) for row in rows}
         logger.info("pending_cache_read", pending_count=len(cache))
         return cache
 
     def get_pending_slugs(self) -> list[str]:
         """Returns slugs that still have at least one part outstanding."""
-        return list(self._load_cache().keys())
+        rows = self.conn.execute("SELECT slug FROM pending_cache").fetchall()
+        return [row["slug"] for row in rows]
 
     def refresh_pending_cache(
         self,
@@ -71,20 +59,26 @@ class PendingCacheStore:
         has every part complete is skipped entirely, matching
         `mark_part_fetched`'s drop-on-completion behavior.
         """
-        cache = self._load_cache()
         initial_state = initial_state or {}
+        existing = {row["slug"] for row in self.conn.execute("SELECT slug FROM pending_cache").fetchall()}
         newly_added = 0
         skipped_already_complete = 0
-        for slug in slugs:
-            if slug in cache:
-                continue
-            state = initial_state.get(slug)
-            if state and all(state.get(part, False) for part in self.CACHE_PARTS):
-                skipped_already_complete += 1
-                continue
-            cache[slug] = {part: bool(state.get(part, False)) if state else False for part in self.CACHE_PARTS}
-            newly_added += 1
-        self._save_cache(cache)
+        with self.conn:
+            for slug in slugs:
+                if slug in existing:
+                    continue
+                state = initial_state.get(slug)
+                if state and all(state.get(part, False) for part in self.CACHE_PARTS):
+                    skipped_already_complete += 1
+                    continue
+                values = {part: bool(state.get(part, False)) if state else False for part in self.CACHE_PARTS}
+                self.conn.execute(
+                    "INSERT INTO pending_cache (slug, description, images, submission) VALUES (?, ?, ?, ?)",
+                    (slug, values["description"], values["images"], values["submission"]),
+                )
+                existing.add(slug)
+                newly_added += 1
+        cache = self.read_pending_cache()
         logger.info(
             "pending_cache_refreshed",
             fetched_count=len(slugs),
@@ -96,72 +90,66 @@ class PendingCacheStore:
 
     def is_part_pending(self, slug: str, part: str) -> bool:
         """True if `part` for `slug` is still outstanding in the cache."""
-        if part not in self.CACHE_PARTS:
-            raise ValueError(
-                f"Unknown part '{part}'. Must be one of {self.CACHE_PARTS}."
-            )
-        cache = self._load_cache()
-        entry = cache.get(slug)
-        pending = bool(entry) and not entry.get(part, False)
+        self._validate_part(part)
+        # `part` is safe to interpolate into SQL here: _validate_part already
+        # checked it against the fixed CACHE_PARTS whitelist above.
+        row = self.conn.execute(f"SELECT {part} FROM pending_cache WHERE slug = ?", (slug,)).fetchone()
+        pending = row is not None and not bool(row[part])
         logger.bind(slug=slug, part=part).info("pending_cache_part_checked", pending=pending)
         return pending
 
     def mark_part_fetched(self, slug: str, part: str) -> None:
         """
         Marks `part` ('description' | 'images' | 'submission') as fetched for `slug`.
-        If all three parts are now True, the slug is removed from the cache entirely.
+        If all three parts are now True, the slug's row is deleted entirely.
         No-op if the slug isn't currently tracked in the cache.
         """
-        if part not in self.CACHE_PARTS:
-            raise ValueError(
-                f"Unknown part '{part}'. Must be one of {self.CACHE_PARTS}."
-            )
-
+        self._validate_part(part)
         log = logger.bind(slug=slug, part=part)
-        cache = self._load_cache()
-        if slug not in cache:
-            log.info("pending_cache_mark_skipped", reason="slug_not_tracked")
-            return
+        with self.conn:
+            row = self.conn.execute("SELECT * FROM pending_cache WHERE slug = ?", (slug,)).fetchone()
+            if row is None:
+                log.info("pending_cache_mark_skipped", reason="slug_not_tracked")
+                return
 
-        cache[slug][part] = True
-        if all(cache[slug].values()):
-            del cache[slug]
-            log.info("pending_cache_slug_completed", reason="all_parts_fetched")
-        else:
-            remaining = [p for p, done in cache[slug].items() if not done]
-            log.info("pending_cache_part_marked_fetched", remaining_parts=remaining)
-
-        self._save_cache(cache)
+            self.conn.execute(f"UPDATE pending_cache SET {part} = 1 WHERE slug = ?", (slug,))
+            updated = self.conn.execute("SELECT * FROM pending_cache WHERE slug = ?", (slug,)).fetchone()
+            if all(updated[p] for p in self.CACHE_PARTS):
+                self.conn.execute("DELETE FROM pending_cache WHERE slug = ?", (slug,))
+                log.info("pending_cache_slug_completed", reason="all_parts_fetched")
+            else:
+                remaining = [p for p in self.CACHE_PARTS if not updated[p]]
+                log.info("pending_cache_part_marked_fetched", remaining_parts=remaining)
 
     def reopen_part(self, slug: str, part: str) -> None:
         """
-        Marks `part` as pending again for `slug`, re-inserting the slug into
-        the cache if it had already been dropped (i.e. was previously 3/3
-        complete). The other parts are assumed still done — this is meant
-        for reopening a single part that new information (e.g. a fresher
-        accepted submission) shows is now stale, not for re-tracking a slug
-        from scratch.
+        Marks `part` as pending again for `slug`, re-inserting the slug's row
+        if it had already been dropped (i.e. was previously 3/3 complete).
+        The other parts are assumed still done — this is meant for reopening
+        a single part that new information (e.g. a fresher accepted
+        submission) shows is now stale, not for re-tracking a slug from
+        scratch.
         """
-        if part not in self.CACHE_PARTS:
-            raise ValueError(
-                f"Unknown part '{part}'. Must be one of {self.CACHE_PARTS}."
-            )
-
+        self._validate_part(part)
         log = logger.bind(slug=slug, part=part)
-        cache = self._load_cache()
-        entry = cache.get(slug, {p: True for p in self.CACHE_PARTS})
-        entry[part] = False
-        cache[slug] = entry
-        self._save_cache(cache)
+        with self.conn:
+            row = self.conn.execute("SELECT * FROM pending_cache WHERE slug = ?", (slug,)).fetchone()
+            if row is None:
+                values = {p: (p != part) for p in self.CACHE_PARTS}
+                self.conn.execute(
+                    "INSERT INTO pending_cache (slug, description, images, submission) VALUES (?, ?, ?, ?)",
+                    (slug, values["description"], values["images"], values["submission"]),
+                )
+            else:
+                self.conn.execute(f"UPDATE pending_cache SET {part} = 0 WHERE slug = ?", (slug,))
         log.info("pending_cache_part_reopened")
 
     def remove_from_cache(self, slug: str) -> bool:
-        """Manually drops a slug from the pending cache. Returns True if it was present."""
+        """Manually drops a slug's row from the pending cache. Returns True if it was present."""
         log = logger.bind(slug=slug)
-        cache = self._load_cache()
-        if slug in cache:
-            del cache[slug]
-            self._save_cache(cache)
+        with self.conn:
+            cursor = self.conn.execute("DELETE FROM pending_cache WHERE slug = ?", (slug,))
+        if cursor.rowcount:
             log.info("pending_cache_entry_removed")
             return True
         log.info("pending_cache_entry_remove_skipped", reason="not_found")
