@@ -42,6 +42,8 @@ from .common import (
     CircuitBreaker,
     describe_part_status,
     get_manager,
+    order_candidates,
+    pending_tags,
     print_batch_summary,
     run_part_for_slug,
 )
@@ -61,34 +63,28 @@ def notes() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def _sync_tags(sync_result: dict) -> dict[str, str]:
-    """slug -> "(new)"/"(updated)" for whatever the just-run sync discovered
-    or reopened, so the picker can flag them instead of leaving the user to
-    guess which pending slugs are actually fresh."""
-    tags = {slug: "(new)" for slug in sync_result["new_slugs"]}
-    tags.update({slug: "(updated)" for slug in sync_result["stale_submission_slugs"]})
-    return tags
-
-
-def _known_slug_candidates(mgr: LeetCodeSyncManager, sync_result: dict) -> list[tuple[str, str]]:
-    """(slug, label) pairs for every slug worth offering: still-pending ones
-    first (tagged "(new)"/"(updated)" where this sync found them so),
-    then everything already fully populated — re-running on an already-done
-    slug is a safe refresh, not an error, so it stays offered too.
+def _known_slug_candidates(mgr: LeetCodeSyncManager) -> list[tuple[str, str]]:
+    """(slug, label) pairs for every slug worth offering: pending ones first
+    — freshly-discovered ("new") ahead of resubmitted ("updated") ahead of
+    everything else still in progress — then everything already fully
+    populated, at the bottom (see order_candidates). Re-running on an
+    already-done slug is a safe refresh, not an error, so it stays offered
+    too.
 
     Labeled consistently via label_slugs — a not-yet-fetched slug gets its
     id/title/difficulty from the pending cache itself (PendingCacheStore
     persists it there on every live sync — see
-    LeetCodeSyncManager.sync_pending_cache), not just a live sync's transient
-    result, so this stays fully labeled even when _sync_and_report degraded
-    to a local-only view (e.g. offline).
+    LeetCodeSyncManager.sync_pending_cache), and its (new)/(updated) tag from
+    pending_tags — both derived from local state alone, so this stays fully
+    labeled and ordered even when _sync_and_report degraded to a local-only
+    view (e.g. offline).
     """
     pending_cache = mgr.storage.read_pending_cache()
-    pending = set(pending_cache.keys())
     done = {r.slug for r in mgr.storage.list_all() if r.slug}
     known = {r.slug: r for r in mgr.storage.list_all() if r.slug}
-    ordered_slugs = sorted(pending) + sorted(done - pending)
-    return label_slugs(ordered_slugs, known, solved_meta=pending_cache, tags=_sync_tags(sync_result))
+    tags = pending_tags(mgr, pending_cache)
+    ordered_slugs = order_candidates(sorted(set(pending_cache) | done), pending_cache, tags)
+    return label_slugs(ordered_slugs, known, solved_meta=pending_cache, tags=tags)
 
 
 def _offline_sync_result(mgr: LeetCodeSyncManager) -> dict:
@@ -123,12 +119,12 @@ def _sync_and_report(mgr: LeetCodeSyncManager) -> dict:
     return result
 
 
-def _recent_scope_candidates(
-    mgr: LeetCodeSyncManager, today_only: bool, sync_result: dict
-) -> list[tuple[str, str]]:
+def _recent_scope_candidates(mgr: LeetCodeSyncManager, today_only: bool) -> list[tuple[str, str]]:
     """(slug, label) pairs scoped to LeetCode's recent-accepted-submissions
     feed (~20 most recent, or just today's), in the same label format as
-    every other picker. Assumes the caller already synced (see
+    every other picker — kept in the feed's own most-recent-first order
+    rather than reordered by order_candidates, since that ordering is itself
+    meaningful here. Assumes the caller already synced (see
     _sync_and_report) — this itself still makes a live GraphQL call
     (list_recent_accepted), so unlike _known_slug_candidates this scope has
     no offline fallback."""
@@ -137,7 +133,7 @@ def _recent_scope_candidates(
     known = {r.slug: r for r in mgr.storage.list_all() if r.slug}
     pending_cache = mgr.storage.read_pending_cache()
     return label_slugs(
-        slugs, known, solved_meta=pending_cache, tags=_sync_tags(sync_result)
+        slugs, known, solved_meta=pending_cache, tags=pending_tags(mgr, pending_cache)
     )
 
 
@@ -317,19 +313,19 @@ def notes_render(
     # need the candidate list). Without this, a slug solved on LeetCode but
     # never locally fetched (including one whose local data was deleted)
     # wouldn't appear in the picker at all.
-    sync_result = _sync_and_report(mgr)
+    _sync_and_report(mgr)
     if recent_scope or today_scope:
         # Unlike the default scope, --recent/--today has no local fallback —
         # LeetCode's recent-accepted feed isn't cached anywhere, so this
         # genuinely can't work offline.
         try:
-            candidates = _recent_scope_candidates(mgr, today_only=today_scope, sync_result=sync_result)
+            candidates = _recent_scope_candidates(mgr, today_only=today_scope)
         except requests.exceptions.RequestException as exc:
             raise click.ClickException(
                 f"could not reach LeetCode to fetch the recent-accepted feed: {exc}"
             )
     else:
-        candidates = _known_slug_candidates(mgr, sync_result)
+        candidates = _known_slug_candidates(mgr)
 
     if not candidates:
         click.echo("Nothing to do — no slugs in scope.")

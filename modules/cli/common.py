@@ -93,6 +93,65 @@ def describe_part_status(part_name: str, slug: str, status: str) -> str:
     return f"[{labels[status]:>4}] {part_name:<10} {slug}"
 
 
+# --------------------------------------------------------------------------- #
+# Pending-slug status tags — derived purely from local state (pending_cache +
+# the submissions table), so it's available identically to every command
+# that lists or picks pending slugs, live sync or not, online or offline.
+# --------------------------------------------------------------------------- #
+
+
+def pending_status_tag(mgr: LeetCodeSyncManager, slug: str, cache_entry: dict) -> str | None:
+    """(new)/(updated)/None for one pending_cache entry:
+
+    - "(new)": nothing's been fetched for this slug at all yet (description
+      still outstanding — images/submission can't have run either, since
+      both depend on description having run first).
+    - "(updated)": specifically a previously-stored submission that's gone
+      stale — reopened by LeetCodeSyncManager.reconcile_recent_accepted
+      because a fresher accepted submission was seen — rather than a
+      first-time fetch. Distinguished from "still just in progress" by
+      whether a submissions-table row already exists for this slug.
+    - None: something's already been fetched (so not "new"), and submission
+      being outstanding isn't a resubmission (so not "updated" either) —
+      just an ordinary in-progress slug.
+    """
+    if not cache_entry.get("description") and not cache_entry.get("images"):
+        return "(new)"
+    if not cache_entry.get("submission") and mgr.storage.submissions_exists(slug):
+        return "(updated)"
+    return None
+
+
+def pending_tags(mgr: LeetCodeSyncManager, pending_cache: dict[str, dict]) -> dict[str, str]:
+    """slug -> tag for every pending_cache entry that has one (see pending_status_tag)."""
+    return {
+        slug: tag
+        for slug, entry in pending_cache.items()
+        if (tag := pending_status_tag(mgr, slug, entry)) is not None
+    }
+
+
+_TAG_PRIORITY = {"(new)": 0, "(updated)": 1}
+
+
+def order_candidates(
+    slugs: list[str], pending_cache: dict[str, dict], tags: dict[str, str]
+) -> list[str]:
+    """Orders slugs so whatever needs attention surfaces first: (new)-tagged,
+    then (updated)-tagged, then any other still-pending slug, then anything
+    already fully fetched — alphabetical within each group. Used by every
+    picker/listing that mixes pending and already-fetched slugs, so "what's
+    outstanding" is always at the top regardless of which command it is."""
+
+    def group(slug: str) -> int:
+        if slug not in pending_cache:
+            return 3
+        tag = tags.get(slug)
+        return _TAG_PRIORITY.get(tag, 2)
+
+    return sorted(slugs, key=lambda s: (group(s), s))
+
+
 class CircuitBreaker:
     """Trips after too many consecutive failures in a batch loop.
 

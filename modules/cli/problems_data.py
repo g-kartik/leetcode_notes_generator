@@ -12,6 +12,8 @@ from .common import (
     CircuitBreaker,
     describe_part_status,
     get_manager,
+    order_candidates,
+    pending_tags,
     print_batch_summary,
     run_part_for_slug,
 )
@@ -60,17 +62,23 @@ def _validate_target(
 def _pick_target_slugs(mgr: LeetCodeSyncManager, candidates: list[str]) -> list[str]:
     """
     Interactive fallback for when neither SLUG nor --all was given: a
-    searchable multi-select over `candidates`, labeled with title/difficulty
-    wherever a problem record already exists (falls back to the bare slug
-    otherwise — e.g. a solved-but-not-yet-fetched slug from the pending
-    cache, which has no title yet). Returns [] (having already told the
-    user why) if there's nothing to pick from or nothing was selected.
+    searchable multi-select over `candidates`, labeled the same
+    "<id>  <title>  (<difficulty>)" way as every other picker in this CLI
+    (see label_slugs) — a not-yet-fetched slug still gets a real label from
+    the pending cache's own stored metadata, not just the bare slug.
+    Freshly-discovered ("new") and resubmitted ("updated") slugs are tagged
+    and sorted to the top (see pending_tags/order_candidates), so what's
+    actually outstanding surfaces first. Returns [] (having already told
+    the user why) if there's nothing to pick from or nothing was selected.
     """
     if not candidates:
         click.echo("Nothing to pick from — no slugs pending.")
         return []
     known = {r.slug: r for r in mgr.storage.list_all() if r.slug}
-    picked = pick_slugs(label_slugs(candidates, known))
+    pending_cache = mgr.storage.read_pending_cache()
+    tags = pending_tags(mgr, pending_cache)
+    ordered = order_candidates(candidates, pending_cache, tags)
+    picked = pick_slugs(label_slugs(ordered, known, solved_meta=pending_cache, tags=tags))
     if not picked:
         click.echo("Nothing selected.")
     return picked
@@ -288,14 +296,48 @@ def data_fetch(
 # `problems data pending`
 # --------------------------------------------------------------------------- #
 
-def _print_cache_table(entries: dict[str, dict[str, bool]]) -> None:
-    header = f"{'SLUG':<45}{'DESCRIPTION':^13}{'IMAGES':^12}{'SUBMISSION':^12}"
+def _print_cache_table(mgr: LeetCodeSyncManager, entries: dict[str, dict]) -> None:
+    """Prints pending-cache entries in the same "<id>  <title>  (<difficulty>)"
+    style used by every picker (see label_slugs) plus per-part status and a
+    (new)/(updated) tag (see pending_tags), instead of bare slugs — so
+    `pending list`/`pending show` carry the same information as the
+    interactive pickers. Freshly-discovered/resubmitted entries are ordered
+    to the top (see order_candidates).
+
+    Prefers a local DB record over the pending cache's own stored
+    id/title/difficulty, same priority as label_slugs — a slug reopened by
+    reconcile_recent_accepted (see pending_status_tag's "(updated)" case)
+    keeps its problems-table record throughout, but reopen_part re-inserts
+    its pending_cache row without metadata (that row only ever needed it for
+    a slug with no DB record yet), so the DB record is the only complete
+    source for a reopened row.
+    """
+    tags = pending_tags(mgr, entries)
+    ordered_slugs = order_candidates(list(entries.keys()), entries, tags)
+    known = {r.slug: r for r in mgr.storage.list_all() if r.slug}
+
+    header = (
+        f"{'ID':>5}  {'TITLE':<42}{'DIFFICULTY':^12}"
+        f"{'DESCRIPTION':^13}{'IMAGES':^10}{'SUBMISSION':^12}  {'STATUS':<9}"
+    )
     click.echo(header)
     click.echo("-" * len(header))
-    for slug, parts in entries.items():
-        row = f"{slug:<45}"
-        for key in ("description", "images", "submission"):
-            row += f"{'yes' if parts.get(key, False) else '-':^12}"
+    for slug in ordered_slugs:
+        parts = entries[slug]
+        record = known.get(slug)
+        if record and record.title:
+            id_label = str(record.id) if record.id is not None else "?"
+            title = record.title
+            difficulty = record.difficulty or "?"
+        else:
+            id_label = str(parts["id"]) if parts.get("id") is not None else "?"
+            title = parts.get("title") or slug
+            difficulty = parts.get("difficulty") or "?"
+        row = f"{id_label:>5}  {title:<42}{difficulty:^12}"
+        row += f"{'yes' if parts.get('description') else '-':^13}"
+        row += f"{'yes' if parts.get('images') else '-':^10}"
+        row += f"{'yes' if parts.get('submission') else '-':^12}"
+        row += f"  {tags.get(slug, ''):<9}"
         click.echo(row)
 
 
@@ -335,13 +377,15 @@ def pending_count() -> None:
 
 @pending.command("list")
 def pending_list() -> None:
-    """List every slug with at least one part still pending. Read-only."""
+    """List every slug with at least one part still pending, freshly-
+    discovered/resubmitted ones on top. Read-only."""
     logger.bind(stage="pending").info("pending_list_command_started")
-    entries = get_manager().storage.read_pending_cache()
+    mgr = get_manager()
+    entries = mgr.storage.read_pending_cache()
     if not entries:
         click.echo("Cache is empty — nothing pending.")
         return
-    _print_cache_table(entries)
+    _print_cache_table(mgr, entries)
 
 
 @pending.command("show")
@@ -360,13 +404,13 @@ def pending_show(slug: str | None) -> None:
             if entry is None:
                 logger.info("pending_show_command_skipped", reason="slug_not_tracked")
                 raise click.ClickException(f"'{slug}' is not in the pending cache (fully done, or never tracked).")
-            _print_cache_table({slug: entry})
+            _print_cache_table(mgr, {slug: entry})
         return
 
     slugs = _pick_target_slugs(mgr, list(entries.keys()))
     if not slugs:
         return
-    _print_cache_table({s: entries[s] for s in slugs})
+    _print_cache_table(mgr, {s: entries[s] for s in slugs})
 
 
 @pending.command("clear")
