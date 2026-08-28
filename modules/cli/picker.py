@@ -8,7 +8,7 @@ so you never have to type a slug at all.
 """
 
 from InquirerPy.base.control import Choice
-from InquirerPy.inquirer import fuzzy
+from InquirerPy.prompts.fuzzy import FuzzyPrompt
 
 from modules.leetcode.models import ProblemRecord
 from modules.leetcode.storage.combined import CombinedQuestionRecord
@@ -37,7 +37,7 @@ def pick_slugs(
 
     choices = [Choice(value=slug, name=label) for slug, label in candidates]
     try:
-        result = fuzzy(
+        result = FuzzyPrompt(
             message=message,
             choices=choices,
             multiselect=multiselect,
