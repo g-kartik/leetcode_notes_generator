@@ -1,6 +1,6 @@
 import os
 import shutil
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import structlog
@@ -40,20 +40,20 @@ class PrefillMissingError(RuntimeError):
 # hand by default — only frontmatter + the problem/solution link(s) are
 # populated. '+ai' styles override the prefill_* keys below with the latest
 # stored modules.ai_prefill.PrefillContent for the slug (see render()).
-_EMPTY_PREFILL = dict(
-    aliases=[],
-    pattern_tags=[],
-    problem_summary=None,
-    pattern=None,
-    core_idea=None,
-    invariant=None,
-    trap=None,
-    recognition_clue=None,
-    complexity_time=None,
-    complexity_space=None,
-    takeaway=None,
-    related=None,
-)
+_EMPTY_PREFILL = {
+    "aliases": [],
+    "pattern_tags": [],
+    "problem_summary": None,
+    "pattern": None,
+    "core_idea": None,
+    "invariant": None,
+    "trap": None,
+    "recognition_clue": None,
+    "complexity_time": None,
+    "complexity_space": None,
+    "takeaway": None,
+    "related": None,
+}
 
 
 class LeetCodeDSAProblemNotesRender:
@@ -171,7 +171,9 @@ class LeetCodeDSAProblemNotesRender:
             # Always link whichever variant was actually rendered for this
             # problem — local when it exists, remote otherwise. See
             # CombinedQuestionRecord.has_local_variant.
-            variant = FileVariant.LOCAL if record.has_local_variant else FileVariant.REMOTE
+            variant = (
+                FileVariant.LOCAL if record.has_local_variant else FileVariant.REMOTE
+            )
             problem_file = self._problem_file_path(record, variant)
             self._warn_if_missing(problem_file, log)
             context["problem_note_name"] = problem_file.stem
@@ -202,7 +204,7 @@ class LeetCodeDSAProblemNotesRender:
         """Copies the current notes file into its per-problem backup folder, timestamped."""
         backup_dir = self._backup_dir(record)
         backup_dir.mkdir(parents=True, exist_ok=True)
-        timestamp = datetime.now().strftime(_BACKUP_TIMESTAMP_FMT)
+        timestamp = datetime.now(UTC).astimezone().strftime(_BACKUP_TIMESTAMP_FMT)
         backup_file = backup_dir / f"{output_file.stem}-{timestamp}{output_file.suffix}"
         shutil.copy2(output_file, backup_file)
         log.info("notes_existing_backed_up", path=str(backup_file))

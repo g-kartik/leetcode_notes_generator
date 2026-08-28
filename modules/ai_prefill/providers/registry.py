@@ -5,7 +5,9 @@ from .claude_code import ClaudeCodeProvider
 from .subprocess_provider import SubprocessJSONProvider
 
 _BUILTIN_FACTORIES = {
-    "claude_code": lambda s: ClaudeCodeProvider(model=s.MODEL, timeout=s.TIMEOUT_SECONDS),
+    "claude_code": lambda s: ClaudeCodeProvider(
+        model=s.MODEL, timeout=s.TIMEOUT_SECONDS
+    ),
     "command": lambda s: SubprocessJSONProvider(
         command=s.command_argv(),
         system_prompt_flag=s.SYSTEM_PROMPT_FLAG,

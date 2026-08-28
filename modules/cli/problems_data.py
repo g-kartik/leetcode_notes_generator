@@ -23,16 +23,28 @@ from .problems import problems
 logger = structlog.get_logger(__name__)
 
 
-def _resolve_part_batch_slugs(mgr: LeetCodeSyncManager, part_name: str, no_cache: bool) -> list[str]:
+def _resolve_part_batch_slugs(
+    mgr: LeetCodeSyncManager, part_name: str, no_cache: bool
+) -> list[str]:
     """Slugs to target for a single-part --all run."""
     if no_cache:
         slugs = [r.slug for r in mgr.storage.list_all() if r.slug]
-        logger.info("part_batch_slugs_resolved", stage=part_name, source="db", slug_count=len(slugs))
+        logger.info(
+            "part_batch_slugs_resolved",
+            stage=part_name,
+            source="db",
+            slug_count=len(slugs),
+        )
         return slugs
 
     cache = mgr.storage.read_pending_cache()
     slugs = [slug for slug, parts in cache.items() if not parts.get(part_name, False)]
-    logger.info("part_batch_slugs_resolved", stage=part_name, source="pending_cache", slug_count=len(slugs))
+    logger.info(
+        "part_batch_slugs_resolved",
+        stage=part_name,
+        source="pending_cache",
+        slug_count=len(slugs),
+    )
     return slugs
 
 
@@ -43,7 +55,9 @@ def _resolve_any_pending_slugs(mgr: LeetCodeSyncManager, no_cache: bool) -> list
         logger.info("full_fetch_slugs_resolved", source="db", slug_count=len(slugs))
         return slugs
     slugs = list(mgr.storage.read_pending_cache().keys())
-    logger.info("full_fetch_slugs_resolved", source="pending_cache", slug_count=len(slugs))
+    logger.info(
+        "full_fetch_slugs_resolved", source="pending_cache", slug_count=len(slugs)
+    )
     return slugs
 
 
@@ -78,7 +92,9 @@ def _pick_target_slugs(mgr: LeetCodeSyncManager, candidates: list[str]) -> list[
     pending_cache = mgr.storage.read_pending_cache()
     tags = pending_tags(mgr, pending_cache)
     ordered = order_candidates(candidates, pending_cache, tags)
-    picked = pick_slugs(label_slugs(ordered, known, solved_meta=pending_cache, tags=tags))
+    picked = pick_slugs(
+        label_slugs(ordered, known, solved_meta=pending_cache, tags=tags)
+    )
     if not picked:
         click.echo("Nothing selected.")
     return picked
@@ -89,7 +105,9 @@ def _apply_limit(stage: str, slugs: list[str], limit: int | None) -> list[str]:
     worked through over several runs instead of one long, easily-noticed session."""
     if not limit or len(slugs) <= limit:
         return slugs
-    logger.info("fetch_batch_capped", stage=stage, limit=limit, total_pending=len(slugs))
+    logger.info(
+        "fetch_batch_capped", stage=stage, limit=limit, total_pending=len(slugs)
+    )
     return slugs[:limit]
 
 
@@ -124,17 +142,27 @@ def _run_single_part(
         status = run_part_for_slug(mgr, part_name, slug, refetch)
         click.echo(describe_part_status(part_name, slug, status))
         if status == "failed":
-            raise click.ClickException(f"could not fetch '{part_name}' for '{slug}' — no data returned")
+            raise click.ClickException(
+                f"could not fetch '{part_name}' for '{slug}' — no data returned"
+            )
         return
 
     if run_all:
-        slugs = _apply_limit(part_name, _resolve_part_batch_slugs(mgr, part_name, no_cache), limit)
+        slugs = _apply_limit(
+            part_name, _resolve_part_batch_slugs(mgr, part_name, no_cache), limit
+        )
         if not slugs:
-            logger.info("fetch_command_batch_completed", stage=part_name, reason="no_slugs_pending")
+            logger.info(
+                "fetch_command_batch_completed",
+                stage=part_name,
+                reason="no_slugs_pending",
+            )
             click.echo("Nothing to do — no slugs pending.")
             return
     else:
-        slugs = _pick_target_slugs(mgr, _resolve_part_batch_slugs(mgr, part_name, no_cache))
+        slugs = _pick_target_slugs(
+            mgr, _resolve_part_batch_slugs(mgr, part_name, no_cache)
+        )
         if not slugs:
             return
 
@@ -185,7 +213,9 @@ def _run_full(
             if status == "failed":
                 failed_parts.append(part_name)
         if failed_parts:
-            raise click.ClickException(f"'{slug}' failed part(s): {', '.join(failed_parts)}")
+            raise click.ClickException(
+                f"'{slug}' failed part(s): {', '.join(failed_parts)}"
+            )
         return
 
     if run_all:
@@ -236,39 +266,57 @@ def data() -> None:
 @data.command("fetch")
 @click.argument("slug", required=False)
 @click.option(
-    "--part", "part_name",
+    "--part",
+    "part_name",
     type=click.Choice(["description", "images", "submission", "full"]),
-    default="full", show_default=True,
+    default="full",
+    show_default=True,
     help="Which part to fetch. 'full' runs description, then images, then "
     "submission, in that fixed order — matches the dependency chain where "
     "images/submission need the description to exist first.",
 )
 @click.option(
-    "--all", "run_all", is_flag=True,
+    "--all",
+    "run_all",
+    is_flag=True,
     help="Run against every slug still pending this part in the cache "
     "('full' pending any part). Omit both SLUG and --all to pick "
     "interactively instead.",
 )
 @click.option(
-    "--no-cache", "no_cache", is_flag=True,
+    "--no-cache",
+    "no_cache",
+    is_flag=True,
     help="With --all, target every slug in the database instead of just cache-pending ones.",
 )
 @click.option(
-    "--refetch", is_flag=True,
+    "--refetch",
+    is_flag=True,
     help="Refetch even if this part's data already exists.",
 )
 @click.option(
-    "--limit", "limit", type=int, default=None,
+    "--limit",
+    "limit",
+    type=int,
+    default=None,
     help="With --all, cap the run to at most this many slugs — spreads a large "
     "backlog across several runs instead of one long session.",
 )
 @click.option(
-    "--max-failures", "max_failures", type=int, default=5, show_default=True,
+    "--max-failures",
+    "max_failures",
+    type=int,
+    default=5,
+    show_default=True,
     help="With --all, abort the run after this many consecutive failures "
     "(likely rate-limited/blocked). 0 disables.",
 )
 @click.option(
-    "--batch-size", "batch_size", type=int, default=25, show_default=True,
+    "--batch-size",
+    "batch_size",
+    type=int,
+    default=25,
+    show_default=True,
     help="With --all, pause for a randomized 60-120s cooldown after every N slugs, "
     "so a large backlog runs as several short sessions instead of one long, "
     "uninterrupted burst. 0 disables.",
@@ -287,14 +335,27 @@ def data_fetch(
     _validate_target(slug, run_all, no_cache, limit)
     mgr = get_manager()
     if part_name == "full":
-        _run_full(mgr, slug, run_all, no_cache, refetch, limit, max_failures, batch_size)
+        _run_full(
+            mgr, slug, run_all, no_cache, refetch, limit, max_failures, batch_size
+        )
     else:
-        _run_single_part(mgr, part_name, slug, run_all, no_cache, refetch, limit, max_failures, batch_size)
+        _run_single_part(
+            mgr,
+            part_name,
+            slug,
+            run_all,
+            no_cache,
+            refetch,
+            limit,
+            max_failures,
+            batch_size,
+        )
 
 
 # --------------------------------------------------------------------------- #
 # `problems data pending`
 # --------------------------------------------------------------------------- #
+
 
 def _print_cache_table(mgr: LeetCodeSyncManager, entries: dict[str, dict]) -> None:
     """Prints pending-cache entries in the same "<id>  <title>  (<difficulty>)"
@@ -360,12 +421,16 @@ def pending_sync() -> None:
     result = get_manager().sync_pending_cache()
 
     click.echo(f"{len(result['new_slugs'])} new slug(s) discovered.")
-    click.echo(f"{len(result['stale_submission_slugs'])} submission(s) resubmitted since last sync.")
+    click.echo(
+        f"{len(result['stale_submission_slugs'])} submission(s) resubmitted since last sync."
+    )
     click.echo(f"{len(result['pending_slugs'])} slug(s) pending overall.")
     for slug in result["pending_slugs"]:
         click.echo(f"  - {slug}")
 
-    log.info("pending_sync_command_completed", pending_count=len(result["pending_slugs"]))
+    log.info(
+        "pending_sync_command_completed", pending_count=len(result["pending_slugs"])
+    )
 
 
 @pending.command("count")
@@ -403,7 +468,9 @@ def pending_show(slug: str | None) -> None:
             entry = entries.get(slug)
             if entry is None:
                 logger.info("pending_show_command_skipped", reason="slug_not_tracked")
-                raise click.ClickException(f"'{slug}' is not in the pending cache (fully done, or never tracked).")
+                raise click.ClickException(
+                    f"'{slug}' is not in the pending cache (fully done, or never tracked)."
+                )
             _print_cache_table(mgr, {slug: entry})
         return
 

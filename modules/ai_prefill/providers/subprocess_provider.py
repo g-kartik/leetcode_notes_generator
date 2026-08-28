@@ -63,9 +63,12 @@ class SubprocessJSONProvider(AIProvider):
                 text=True,
                 timeout=self.timeout,
                 cwd=self.cwd,
+                check=False,
             )
         except subprocess.TimeoutExpired as exc:
-            raise AIProviderError(f"'{argv[0]}' timed out after {self.timeout}s") from exc
+            raise AIProviderError(
+                f"'{argv[0]}' timed out after {self.timeout}s"
+            ) from exc
         except FileNotFoundError as exc:
             raise AIProviderError(f"'{argv[0]}' not found on PATH") from exc
 
@@ -82,9 +85,13 @@ class SubprocessJSONProvider(AIProvider):
             try:
                 envelope = json.loads(raw)
             except json.JSONDecodeError as exc:
-                raise AIProviderError(f"expected a JSON envelope, got: {raw[:500]}") from exc
+                raise AIProviderError(
+                    f"expected a JSON envelope, got: {raw[:500]}"
+                ) from exc
             raw = envelope.get(self.envelope_key)
             if not raw:
-                raise AIProviderError(f"envelope missing '{self.envelope_key}' key: {envelope}")
+                raise AIProviderError(
+                    f"envelope missing '{self.envelope_key}' key: {envelope}"
+                )
 
         return raw

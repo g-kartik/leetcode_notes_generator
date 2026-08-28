@@ -49,7 +49,9 @@ def _show_one(mgr, slug: str) -> None:
         if record is None:
             logger.info("problems_show_command_skipped", reason="not_found")
             raise click.ClickException(f"'{slug}' not found in the database.")
-        click.echo(json.dumps(record.model_dump(mode="json"), indent=2, ensure_ascii=False))
+        click.echo(
+            json.dumps(record.model_dump(mode="json"), indent=2, ensure_ascii=False)
+        )
 
 
 @problems.command("show")
@@ -106,7 +108,9 @@ def problems_delete(slug: str | None, skip_confirm: bool) -> None:
 
     if slug:
         if not skip_confirm:
-            click.confirm(f"Delete '{slug}' from the database? This cannot be undone.", abort=True)
+            click.confirm(
+                f"Delete '{slug}' from the database? This cannot be undone.", abort=True
+            )
         if not _delete_one(mgr, slug):
             raise click.ClickException(f"'{slug}' not found in the database.")
         click.echo(f"Deleted '{slug}'.")

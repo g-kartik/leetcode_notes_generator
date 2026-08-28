@@ -82,7 +82,9 @@ def _run_migrations(conn: sqlite3.Connection) -> None:
     MIGRATIONS_DIR), so there's a single source of truth for the current
     schema regardless of when the DB file was first created.
     """
-    applied = {row["version"] for row in conn.execute("SELECT version FROM schema_migrations")}
+    applied = {
+        row["version"] for row in conn.execute("SELECT version FROM schema_migrations")
+    }
     for path in sorted(MIGRATIONS_DIR.glob("*.sql")):
         version = path.stem
         if version in applied:

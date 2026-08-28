@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import structlog
@@ -59,16 +59,27 @@ class AIPrefillStorage:
             content=PrefillContent.model_validate_json(row["content"]),
         )
 
-    def add_version(self, slug: str, *, provider: str, content: PrefillContent) -> PrefillVersion:
+    def add_version(
+        self, slug: str, *, provider: str, content: PrefillContent
+    ) -> PrefillVersion:
         """Appends a new version for `slug`. Existing versions are never overwritten or dropped."""
-        version = PrefillVersion(generated_at=datetime.now(), provider=provider, content=content)
+        version = PrefillVersion(
+            generated_at=datetime.now(UTC), provider=provider, content=content
+        )
         with self.conn:
             self.conn.execute(
                 "INSERT INTO prefill_versions (slug, generated_at, provider, content) VALUES (?, ?, ?, ?)",
-                (slug, version.generated_at.isoformat(), version.provider, version.content.model_dump_json()),
+                (
+                    slug,
+                    version.generated_at.isoformat(),
+                    version.provider,
+                    version.content.model_dump_json(),
+                ),
             )
         count = self.version_count(slug)
-        logger.bind(slug=slug).info("ai_prefill_version_saved", provider=provider, version_count=count)
+        logger.bind(slug=slug).info(
+            "ai_prefill_version_saved", provider=provider, version_count=count
+        )
         return version
 
     def list_versions(self, slug: str) -> list[PrefillVersion]:
@@ -80,7 +91,8 @@ class AIPrefillStorage:
 
     def latest(self, slug: str) -> PrefillVersion | None:
         row = self.conn.execute(
-            "SELECT * FROM prefill_versions WHERE slug = ? ORDER BY id DESC LIMIT 1", (slug,)
+            "SELECT * FROM prefill_versions WHERE slug = ? ORDER BY id DESC LIMIT 1",
+            (slug,),
         ).fetchone()
         return self._row_to_version(row) if row else None
 

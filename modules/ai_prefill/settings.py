@@ -47,7 +47,9 @@ class AIPrefillSettings(BaseProjectSettings):
     MAX_DESCRIPTION_CHARS: int = 6000
     MAX_CODE_CHARS: int = 6000
 
-    PROMPTS_DIR: Path = BaseProjectSettings.PROJECT_ROOT_DIR / "resources" / "prompts" / "ai_prefill"
+    PROMPTS_DIR: Path = (
+        BaseProjectSettings.PROJECT_ROOT_DIR / "resources" / "prompts" / "ai_prefill"
+    )
 
     DATA_STORAGE_DIR: Path = BaseProjectSettings.PROJECT_ROOT_DIR / "LEETCODE_DATA"
     # Own SQLite file, deliberately separate from leetcode.db — this data is

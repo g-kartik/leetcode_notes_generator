@@ -30,13 +30,17 @@ import click
 import requests
 import structlog
 
-from modules.ai_prefill import AIPrefillGenerator, AIProviderError, PrefillGenerationError
+from modules.ai_prefill import (
+    AIPrefillGenerator,
+    AIProviderError,
+    PrefillGenerationError,
+)
 from modules.ai_prefill.settings import ai_prefill_settings
-from modules.sync.pipeline import LeetCodeSyncManager
 from modules.render.markdown_notes import LeetCodeDSAProblemNotesRender
 from modules.render.markdown_problem import LeetCodeDSAProblemMarkdownRender
 from modules.render.settings import render_settings
 from modules.render.utils import AI_STYLE, NotesStyle
+from modules.sync.pipeline import LeetCodeSyncManager
 
 from .common import (
     CircuitBreaker,
@@ -83,7 +87,9 @@ def _known_slug_candidates(mgr: LeetCodeSyncManager) -> list[tuple[str, str]]:
     done = {r.slug for r in mgr.storage.list_all() if r.slug}
     known = {r.slug: r for r in mgr.storage.list_all() if r.slug}
     tags = pending_tags(mgr, pending_cache)
-    ordered_slugs = order_candidates(sorted(set(pending_cache) | done), pending_cache, tags)
+    ordered_slugs = order_candidates(
+        sorted(set(pending_cache) | done), pending_cache, tags
+    )
     return label_slugs(ordered_slugs, known, solved_meta=pending_cache, tags=tags)
 
 
@@ -110,7 +116,9 @@ def _sync_and_report(mgr: LeetCodeSyncManager) -> dict:
         result = mgr.sync_pending_cache()
     except requests.exceptions.RequestException as exc:
         logger.warning("sync_and_report_offline_fallback", error=str(exc))
-        click.echo(f"  could not reach LeetCode ({exc.__class__.__name__}) — using local data only.")
+        click.echo(
+            f"  could not reach LeetCode ({exc.__class__.__name__}) — using local data only."
+        )
         return _offline_sync_result(mgr)
     click.echo(
         f"  {len(result['new_slugs'])} new slug(s) discovered, "
@@ -119,7 +127,9 @@ def _sync_and_report(mgr: LeetCodeSyncManager) -> dict:
     return result
 
 
-def _recent_scope_candidates(mgr: LeetCodeSyncManager, today_only: bool) -> list[tuple[str, str]]:
+def _recent_scope_candidates(
+    mgr: LeetCodeSyncManager, today_only: bool
+) -> list[tuple[str, str]]:
     """(slug, label) pairs scoped to LeetCode's recent-accepted-submissions
     feed (~20 most recent, or just today's), in the same label format as
     every other picker — kept in the feed's own most-recent-first order
@@ -190,11 +200,15 @@ def _generate_notes_for_slug(
         if generator.storage.exists(slug):
             target_style = AI_STYLE[style]
         else:
-            log.warning("notes_render_ai_style_skipped", reason="no_prefill_content_available")
+            log.warning(
+                "notes_render_ai_style_skipped", reason="no_prefill_content_available"
+            )
             click.echo("     (no prefill content available — writing without it)")
 
     click.echo(f"  -> render notes file ({target_style.value})")
-    notes_renderer = LeetCodeDSAProblemNotesRender(style=target_style, output_base=output_base)
+    notes_renderer = LeetCodeDSAProblemNotesRender(
+        style=target_style, output_base=output_base
+    )
     _, status = notes_renderer.save(combined, replace_existing=replace_existing)
     return status
 
@@ -202,7 +216,9 @@ def _generate_notes_for_slug(
 @notes.command("render")
 @click.argument("slug", required=False)
 @click.option(
-    "--all", "run_all", is_flag=True,
+    "--all",
+    "run_all",
+    is_flag=True,
     help="Skip the interactive picker and process every slug in scope — the "
     "--recent/--today batch if given, otherwise every known slug (pending or "
     "already-populated). Can be a long-running batch, especially combined "
@@ -210,13 +226,17 @@ def _generate_notes_for_slug(
     "small backlog.",
 )
 @click.option(
-    "--recent", "recent_scope", is_flag=True,
+    "--recent",
+    "recent_scope",
+    is_flag=True,
     help="Scope to LeetCode's recent-accepted-submissions batch (~20 most "
     "recent), syncing from LeetCode first to catch brand-new slugs and "
     "resubmits.",
 )
 @click.option(
-    "--today", "today_scope", is_flag=True,
+    "--today",
+    "today_scope",
+    is_flag=True,
     help="Scope to submissions accepted today (local time), syncing from "
     "LeetCode first to catch brand-new slugs and resubmits.",
 )
@@ -229,33 +249,46 @@ def _generate_notes_for_slug(
     "this is used instead. Defaults to DEFAULT_NOTES_STYLE (.env) when set.",
 )
 @click.option(
-    "--ai", is_flag=True,
+    "--ai",
+    is_flag=True,
     help="Render the '+ai' variant of --style, using the latest stored AI "
     "prefill content for each slug — generating it first if none exists yet.",
 )
 @click.option(
-    "--regenerate-ai", "regenerate_ai", is_flag=True,
+    "--regenerate-ai",
+    "regenerate_ai",
+    is_flag=True,
     help="Like --ai, but always generates a fresh prefill version first, even "
     "if one already exists (prior versions are kept, not overwritten — see "
     "'notes prefill').",
 )
 @click.option(
-    "--replace-existing", is_flag=True,
+    "--replace-existing",
+    is_flag=True,
     help="Regenerate the notes file even if one already exists — the existing "
     "file is backed up first (Leetcode Notes/backups/<id>-<slug>/), since it "
     "may contain hand-written content.",
 )
 @click.option(
-    "--output-base", "output_base", type=click.Path(path_type=Path), default=None,
+    "--output-base",
+    "output_base",
+    type=click.Path(path_type=Path),
+    default=None,
     help="Priority: this flag > OUTPUT_BASE_DIR (.env) > render_settings.DEFAULT_WRITE_DIR.",
 )
 @click.option(
-    "--no-rate-limit", "no_rate_limit", is_flag=True,
+    "--no-rate-limit",
+    "no_rate_limit",
+    is_flag=True,
     help="With --ai/--regenerate-ai, skip the AI_PREFILL_RATE_LIMIT_SECONDS "
     "pause between AI generations.",
 )
 @click.option(
-    "--max-failures", "max_failures", type=int, default=5, show_default=True,
+    "--max-failures",
+    "max_failures",
+    type=int,
+    default=5,
+    show_default=True,
     help="With --all, abort the run after this many consecutive failures. 0 disables.",
 )
 def notes_render(
@@ -286,14 +319,14 @@ def notes_render(
 
     mgr = get_manager()
     rate_limit_delay = 0.0 if no_rate_limit else ai_prefill_settings.RATE_LIMIT_SECONDS
-    kwargs = dict(
-        style=NotesStyle(style),
-        output_base=output_base,
-        replace_existing=replace_existing,
-        ai=ai,
-        regenerate_ai=regenerate_ai,
-        rate_limit_delay=rate_limit_delay,
-    )
+    kwargs = {
+        "style": NotesStyle(style),
+        "output_base": output_base,
+        "replace_existing": replace_existing,
+        "ai": ai,
+        "regenerate_ai": regenerate_ai,
+        "rate_limit_delay": rate_limit_delay,
+    }
 
     if slug:
         with structlog.contextvars.bound_contextvars(slug=slug, stage="notes"):
@@ -301,9 +334,13 @@ def notes_render(
             log.info("notes_render_command_started")
             try:
                 status = _generate_notes_for_slug(mgr, slug, **kwargs)
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 — the pipeline spans
+                # network, disk, and template rendering; any failure here
+                # should surface as a clean CLI error, not a raw traceback.
                 log.warning("notes_render_command_failed", error=str(exc))
-                raise click.ClickException(f"could not render notes for '{slug}': {exc}")
+                raise click.ClickException(
+                    f"could not render notes for '{slug}': {exc}"
+                )
             log.info("notes_render_command_succeeded", status=status)
             click.echo(f"[{'done' if status == 'written' else 'skip'}] notes {slug}")
         return
@@ -394,12 +431,15 @@ def notes_render(
     help="Generate prefill content for every slug that already has problem data populated.",
 )
 @click.option(
-    "--regenerate", is_flag=True,
+    "--regenerate",
+    is_flag=True,
     help="Generate a new version even if prefill content already exists for this "
     "slug. Prior versions are kept either way — see AIPrefillStorage.",
 )
 @click.option(
-    "--no-rate-limit", "no_rate_limit", is_flag=True,
+    "--no-rate-limit",
+    "no_rate_limit",
+    is_flag=True,
     help="With --all, skip the AI_PREFILL_RATE_LIMIT_SECONDS pause between "
     "generations. Only worth it on a plan without tight usage limits.",
 )
@@ -463,7 +503,9 @@ def notes_prefill(
                 generator.generate(record)
             except (AIProviderError, PrefillGenerationError) as exc:
                 log.warning("prefill_command_failed", error=str(exc))
-                raise click.ClickException(f"prefill generation failed for '{slug}': {exc}")
+                raise click.ClickException(
+                    f"prefill generation failed for '{slug}': {exc}"
+                )
             log.info("prefill_command_succeeded")
             click.echo(f"[done] prefill {slug}")
         return
@@ -475,7 +517,9 @@ def notes_prefill(
             records = records[:limit]
     else:
         if not records:
-            click.echo("Nothing to pick from — no slugs have problem data populated yet.")
+            click.echo(
+                "Nothing to pick from — no slugs have problem data populated yet."
+            )
             return
         picked = pick_slugs(label_records(records))
         if not picked:

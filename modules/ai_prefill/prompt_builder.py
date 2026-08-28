@@ -40,9 +40,13 @@ class PrefillPromptBuilder:
         tags = ", ".join(
             t.get("name") or t.get("slug", "") for t in (record.tags or [])
         )
-        description = (record.content.text or record.content.remote_markdown or "").strip()
+        description = (
+            record.content.text or record.content.remote_markdown or ""
+        ).strip()
         submission = record.submission
-        code = (submission.code if submission else "(no accepted submission stored)").strip()
+        code = (
+            submission.code if submission else "(no accepted submission stored)"
+        ).strip()
 
         return self._user_template.safe_substitute(
             title=record.title or record.slug,

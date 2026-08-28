@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from modules.leetcode.storage.combined import CombinedQuestionRecord
 
 from .prompt_builder import PrefillPromptBuilder
-from .providers.base import AIProvider, AIProviderError
+from .providers.base import AIProvider
 from .providers.registry import get_provider
 from .schema import PrefillContent
 from .storage import AIPrefillStorage, PrefillVersion
@@ -59,7 +59,9 @@ class AIPrefillGenerator:
         try:
             return PrefillContent.model_validate(data)
         except ValidationError as exc:
-            raise PrefillGenerationError(f"provider JSON didn't match schema: {exc}") from exc
+            raise PrefillGenerationError(
+                f"provider JSON didn't match schema: {exc}"
+            ) from exc
 
     def generate(self, record: CombinedQuestionRecord) -> PrefillVersion:
         """
@@ -73,10 +75,14 @@ class AIPrefillGenerator:
         user_prompt = self.prompt_builder.user_prompt(record)
 
         log.info("prefill_generation_started", provider=self.provider.name)
-        raw = self.provider.generate(system_prompt=system_prompt, user_prompt=user_prompt)
+        raw = self.provider.generate(
+            system_prompt=system_prompt, user_prompt=user_prompt
+        )
 
         content = self._parse_response(raw)
-        version = self.storage.add_version(record.slug, provider=self.provider.name, content=content)
+        version = self.storage.add_version(
+            record.slug, provider=self.provider.name, content=content
+        )
         log.info(
             "prefill_generation_succeeded",
             version_count=self.storage.version_count(record.slug),

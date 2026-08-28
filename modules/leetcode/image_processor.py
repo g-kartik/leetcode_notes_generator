@@ -65,13 +65,18 @@ class LeetCodeImageProcessor:
         guessed_path = image_path.with_suffix(f".{self._get_extension(url)}")
 
         if guessed_path.exists():
-            logger.info("image_download_skipped", url=url, reason="already_cached", path=str(guessed_path))
+            logger.info(
+                "image_download_skipped",
+                url=url,
+                reason="already_cached",
+                path=str(guessed_path),
+            )
             return guessed_path
 
         try:
             response = self.image_session.get(url, timeout=10)
             response.raise_for_status()
-        except Exception as exc:
+        except requests.exceptions.RequestException as exc:
             logger.warning("image_download_failed", url=url, error=str(exc))
             return None
 
@@ -99,7 +104,11 @@ class LeetCodeImageProcessor:
 
         if not images:
             log.info("image_processing_skipped", reason="no_images_found")
-            return {"has_images": False, "imgs_local_paths": [], "content_local_html": None}
+            return {
+                "has_images": False,
+                "imgs_local_paths": [],
+                "content_local_html": None,
+            }
 
         log.info("image_processing_started", image_candidate_count=len(images))
 
@@ -110,7 +119,12 @@ class LeetCodeImageProcessor:
             src = str(img.get("src", "")).strip()
 
             if not src or urlparse(src).scheme not in ("http", "https"):
-                log.warning("image_skipped", reason="invalid_or_relative_src", index=idx, src=src)
+                log.warning(
+                    "image_skipped",
+                    reason="invalid_or_relative_src",
+                    index=idx,
+                    src=src,
+                )
                 img.decompose()
                 continue
 

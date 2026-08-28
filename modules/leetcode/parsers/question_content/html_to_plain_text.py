@@ -70,6 +70,8 @@ def html_to_plain_text(raw_html: str | None) -> str:
 
         raw_text = soup.get_text(separator="")
         return _normalize_whitespace(raw_text)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — bs4 has no fixed exception
+        # surface for malformed HTML; any failure here should degrade to
+        # the raw HTML rather than break the whole sync.
         logger.warning("html_to_plain_text_conversion_failed", error=str(exc))
         return raw_html

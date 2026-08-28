@@ -24,7 +24,9 @@ class PendingCacheStore:
 
     def _validate_part(self, part: str) -> None:
         if part not in self.CACHE_PARTS:
-            raise ValueError(f"Unknown part '{part}'. Must be one of {self.CACHE_PARTS}.")
+            raise ValueError(
+                f"Unknown part '{part}'. Must be one of {self.CACHE_PARTS}."
+            )
 
     @classmethod
     def _row_to_dict(cls, row: sqlite3.Row) -> dict:
@@ -81,7 +83,10 @@ class PendingCacheStore:
         """
         initial_state = initial_state or {}
         meta = meta or {}
-        existing = {row["slug"] for row in self.conn.execute("SELECT slug FROM pending_cache").fetchall()}
+        existing = {
+            row["slug"]
+            for row in self.conn.execute("SELECT slug FROM pending_cache").fetchall()
+        }
         newly_added = 0
         skipped_already_complete = 0
         with self.conn:
@@ -91,14 +96,22 @@ class PendingCacheStore:
                     if slug_meta:
                         self.conn.execute(
                             "UPDATE pending_cache SET id = ?, title = ?, difficulty = ? WHERE slug = ?",
-                            (slug_meta.get("id"), slug_meta.get("title"), slug_meta.get("difficulty"), slug),
+                            (
+                                slug_meta.get("id"),
+                                slug_meta.get("title"),
+                                slug_meta.get("difficulty"),
+                                slug,
+                            ),
                         )
                     continue
                 state = initial_state.get(slug)
                 if state and all(state.get(part, False) for part in self.CACHE_PARTS):
                     skipped_already_complete += 1
                     continue
-                values = {part: bool(state.get(part, False)) if state else False for part in self.CACHE_PARTS}
+                values = {
+                    part: bool(state.get(part, False)) if state else False
+                    for part in self.CACHE_PARTS
+                }
                 self.conn.execute(
                     "INSERT INTO pending_cache "
                     "(slug, id, title, difficulty, description, images, submission) "
@@ -130,9 +143,13 @@ class PendingCacheStore:
         self._validate_part(part)
         # `part` is safe to interpolate into SQL here: _validate_part already
         # checked it against the fixed CACHE_PARTS whitelist above.
-        row = self.conn.execute(f"SELECT {part} FROM pending_cache WHERE slug = ?", (slug,)).fetchone()
+        row = self.conn.execute(
+            f"SELECT {part} FROM pending_cache WHERE slug = ?", (slug,)
+        ).fetchone()
         pending = row is not None and not bool(row[part])
-        logger.bind(slug=slug, part=part).info("pending_cache_part_checked", pending=pending)
+        logger.bind(slug=slug, part=part).info(
+            "pending_cache_part_checked", pending=pending
+        )
         return pending
 
     def mark_part_fetched(self, slug: str, part: str) -> None:
@@ -144,13 +161,19 @@ class PendingCacheStore:
         self._validate_part(part)
         log = logger.bind(slug=slug, part=part)
         with self.conn:
-            row = self.conn.execute("SELECT * FROM pending_cache WHERE slug = ?", (slug,)).fetchone()
+            row = self.conn.execute(
+                "SELECT * FROM pending_cache WHERE slug = ?", (slug,)
+            ).fetchone()
             if row is None:
                 log.info("pending_cache_mark_skipped", reason="slug_not_tracked")
                 return
 
-            self.conn.execute(f"UPDATE pending_cache SET {part} = 1 WHERE slug = ?", (slug,))
-            updated = self.conn.execute("SELECT * FROM pending_cache WHERE slug = ?", (slug,)).fetchone()
+            self.conn.execute(
+                f"UPDATE pending_cache SET {part} = 1 WHERE slug = ?", (slug,)
+            )
+            updated = self.conn.execute(
+                "SELECT * FROM pending_cache WHERE slug = ?", (slug,)
+            ).fetchone()
             if all(updated[p] for p in self.CACHE_PARTS):
                 self.conn.execute("DELETE FROM pending_cache WHERE slug = ?", (slug,))
                 log.info("pending_cache_slug_completed", reason="all_parts_fetched")
@@ -170,22 +193,33 @@ class PendingCacheStore:
         self._validate_part(part)
         log = logger.bind(slug=slug, part=part)
         with self.conn:
-            row = self.conn.execute("SELECT * FROM pending_cache WHERE slug = ?", (slug,)).fetchone()
+            row = self.conn.execute(
+                "SELECT * FROM pending_cache WHERE slug = ?", (slug,)
+            ).fetchone()
             if row is None:
                 values = {p: (p != part) for p in self.CACHE_PARTS}
                 self.conn.execute(
                     "INSERT INTO pending_cache (slug, description, images, submission) VALUES (?, ?, ?, ?)",
-                    (slug, values["description"], values["images"], values["submission"]),
+                    (
+                        slug,
+                        values["description"],
+                        values["images"],
+                        values["submission"],
+                    ),
                 )
             else:
-                self.conn.execute(f"UPDATE pending_cache SET {part} = 0 WHERE slug = ?", (slug,))
+                self.conn.execute(
+                    f"UPDATE pending_cache SET {part} = 0 WHERE slug = ?", (slug,)
+                )
         log.info("pending_cache_part_reopened")
 
     def remove_from_cache(self, slug: str) -> bool:
         """Manually drops a slug's row from the pending cache. Returns True if it was present."""
         log = logger.bind(slug=slug)
         with self.conn:
-            cursor = self.conn.execute("DELETE FROM pending_cache WHERE slug = ?", (slug,))
+            cursor = self.conn.execute(
+                "DELETE FROM pending_cache WHERE slug = ?", (slug,)
+            )
         if cursor.rowcount:
             log.info("pending_cache_entry_removed")
             return True

@@ -5,7 +5,7 @@ no network or storage I/O — over the list of {slug, title, timestamp} dicts
 produced by parsers.gql_recent_ac_submissions.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 import structlog
 
@@ -17,11 +17,12 @@ def filter_today(submissions: list[dict], now: datetime | None = None) -> list[d
 
     `now` is only for tests to pin "today" — real callers should omit it.
     """
-    reference = (now or datetime.now()).astimezone()
+    reference = (now or datetime.now(UTC)).astimezone()
     start_of_today = reference.replace(hour=0, minute=0, second=0, microsecond=0)
 
     today_only = [
-        item for item in submissions
+        item
+        for item in submissions
         if item.get("timestamp") is not None and item["timestamp"] >= start_of_today
     ]
     logger.info(

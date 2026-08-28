@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 import requests
 import structlog
 from urllib3.util import Retry
@@ -66,7 +68,7 @@ class LeetCodeClient:
             domain="leetcode.com",
         )
 
-    _DIFFICULTY_LEVELS = {1: "Easy", 2: "Medium", 3: "Hard"}
+    _DIFFICULTY_LEVELS: ClassVar[dict[int, str]] = {1: "Easy", 2: "Medium", 3: "Hard"}
 
     def get_solved_questions(self) -> list[dict]:
         """Fetches all solved problems ('ac' status) from the REST API endpoint.
@@ -198,12 +200,18 @@ class LeetCodeClient:
             log.error("submission_list_request_failed", errors=result["errors"])
             raise RuntimeError(f"GraphQL Error: {result['errors']}")
 
-        submissions = result.get("data", {}).get("questionSubmissionList", {}).get("submissions", [])
+        submissions = (
+            result.get("data", {})
+            .get("questionSubmissionList", {})
+            .get("submissions", [])
+        )
         log.info("submission_list_request_succeeded", submission_count=len(submissions))
 
         return result
 
-    def get_recent_ac_submissions(self, username: str | None = None, limit: int = 20) -> dict:
+    def get_recent_ac_submissions(
+        self, username: str | None = None, limit: int = 20
+    ) -> dict:
         """Queries LeetCode GraphQL for a user's most recent accepted submissions.
 
         Uses `username` if given, otherwise falls back to `LEETCODE_USERNAME`
@@ -245,7 +253,9 @@ class LeetCodeClient:
             raise RuntimeError(f"GraphQL Error: {result['errors']}")
 
         submissions = result.get("data", {}).get("recentAcSubmissionList", [])
-        log.info("recent_ac_submissions_request_succeeded", submission_count=len(submissions))
+        log.info(
+            "recent_ac_submissions_request_succeeded", submission_count=len(submissions)
+        )
 
         return result
 

@@ -47,12 +47,21 @@ def is_part_populated(mgr: LeetCodeSyncManager, part_name: str, slug: str) -> bo
         # reconcile_recent_accepted because a fresher accepted submission was seen.
         reopened = mgr.storage.is_part_pending(slug, "submission")
         found = exists and not reopened
-        log.info("part_populated_check", already_populated=found, exists=exists, reopened=reopened)
+        log.info(
+            "part_populated_check",
+            already_populated=found,
+            exists=exists,
+            reopened=reopened,
+        )
         return found
 
     record = mgr.storage.problems_get_by_slug(slug)
     if record is None:
-        log.info("part_populated_check", already_populated=False, reason="no_problem_record_stored")
+        log.info(
+            "part_populated_check",
+            already_populated=False,
+            reason="no_problem_record_stored",
+        )
         return False
     if part_name == "description":
         found = bool(record.raw_question_html)
@@ -70,7 +79,9 @@ def is_part_populated(mgr: LeetCodeSyncManager, part_name: str, slug: str) -> bo
     return found
 
 
-def run_part_for_slug(mgr: LeetCodeSyncManager, part_name: str, slug: str, refetch: bool) -> str:
+def run_part_for_slug(
+    mgr: LeetCodeSyncManager, part_name: str, slug: str, refetch: bool
+) -> str:
     """Runs one pipeline part for one slug. Returns 'skipped', 'success', or 'failed'."""
     with structlog.contextvars.bound_contextvars(slug=slug, stage=part_name):
         log = logger.bind()
@@ -100,7 +111,9 @@ def describe_part_status(part_name: str, slug: str, status: str) -> str:
 # --------------------------------------------------------------------------- #
 
 
-def pending_status_tag(mgr: LeetCodeSyncManager, slug: str, cache_entry: dict) -> str | None:
+def pending_status_tag(
+    mgr: LeetCodeSyncManager, slug: str, cache_entry: dict
+) -> str | None:
     """(new)/(updated)/None for one pending_cache entry:
 
     - "(new)": nothing's been fetched for this slug at all yet (description
@@ -122,7 +135,9 @@ def pending_status_tag(mgr: LeetCodeSyncManager, slug: str, cache_entry: dict) -
     return None
 
 
-def pending_tags(mgr: LeetCodeSyncManager, pending_cache: dict[str, dict]) -> dict[str, str]:
+def pending_tags(
+    mgr: LeetCodeSyncManager, pending_cache: dict[str, dict]
+) -> dict[str, str]:
     """slug -> tag for every pending_cache entry that has one (see pending_status_tag)."""
     return {
         slug: tag
@@ -187,7 +202,9 @@ class BatchPacer:
     babysit and re-invoke the command themselves to get the same effect.
     """
 
-    def __init__(self, batch_size: int, cooldown_range: tuple[float, float] = (60, 120)):
+    def __init__(
+        self, batch_size: int, cooldown_range: tuple[float, float] = (60, 120)
+    ):
         self.batch_size = batch_size
         self.cooldown_range = cooldown_range
 

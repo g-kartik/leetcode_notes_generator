@@ -24,7 +24,12 @@ from modules.leetcode.storage import LeetCodeDSAStorage
 DATA_DIR = leetcode_settings.PROBLEMS_DATA_DIR
 BACKUP_DIR = DATA_DIR / "_json_backup"
 
-JSON_FILES = ["problems.json", "submissions.json", "solved_slugs_cache.json", "ai_prefill.json"]
+JSON_FILES = [
+    "problems.json",
+    "submissions.json",
+    "solved_slugs_cache.json",
+    "ai_prefill.json",
+]
 
 
 def _load_json(path: Path, default):
@@ -108,11 +113,15 @@ def main() -> None:
 
     print("Migrating pending cache...")
     old_c, new_c = migrate_pending_cache(storage)
-    print(f"  solved_slugs_cache.json: {old_c} -> leetcode.db pending_cache table: {new_c}")
+    print(
+        f"  solved_slugs_cache.json: {old_c} -> leetcode.db pending_cache table: {new_c}"
+    )
 
     print("Migrating AI prefill versions...")
     total_v, migrated_v, skipped_v = migrate_ai_prefill()
-    print(f"  ai_prefill.json: {total_v} versions -> ai_prefill.db: {migrated_v} migrated, {skipped_v} skipped (already present)")
+    print(
+        f"  ai_prefill.json: {total_v} versions -> ai_prefill.db: {migrated_v} migrated, {skipped_v} skipped (already present)"
+    )
 
     mismatches = []
     if old_p != new_p:

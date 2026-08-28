@@ -16,6 +16,7 @@ pluggable AI provider. Driven by a `click`-based CLI (`cli.py`).
   `uv run python -c "..."` for one-off scripting against the library directly, e.g.:
   ```python
   from modules.sync.pipeline import LeetCodeSyncManager
+
   mgr = LeetCodeSyncManager()
   result = mgr.sync_pending_cache()
   ```

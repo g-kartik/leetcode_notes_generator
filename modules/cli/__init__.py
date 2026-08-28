@@ -6,8 +6,6 @@ Importing this package registers every subcommand onto the root `cli` group
 defined in `root.py`.
 """
 
-from .root import cli
-
 from . import (  # noqa: F401  (side effect: registers commands onto `cli`)
     notes,
     problems,
@@ -16,5 +14,6 @@ from . import (  # noqa: F401  (side effect: registers commands onto `cli`)
     problems_recent,
     problems_render,
 )
+from .root import cli
 
 __all__ = ["cli"]

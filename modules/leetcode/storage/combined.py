@@ -34,6 +34,6 @@ class CombinedQuestionRecord(BaseModel):
     @classmethod
     def from_parts(
         cls, problem: ProblemRecord, submission: SubmissionRecord | None
-    ) -> "CombinedQuestionRecord":
+    ) -> CombinedQuestionRecord:
         """Builds a combined record from a ProblemRecord and its (possibly absent) SubmissionRecord."""
         return cls(**problem.model_dump(), submission=submission)

@@ -41,8 +41,12 @@ def _print_full_help(ctx: click.Context, param: click.Parameter, value: bool) ->
 
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.option(
-    "-H", "--help-all",
-    is_flag=True, is_eager=True, expose_value=False, callback=_print_full_help,
+    "-H",
+    "--help-all",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=_print_full_help,
     help="Show help for this command and every subcommand, recursively, then exit.",
 )
 def cli() -> None:

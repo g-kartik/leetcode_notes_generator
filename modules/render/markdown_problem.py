@@ -95,7 +95,11 @@ class LeetCodeDSAProblemMarkdownRender:
             if target_assets_dir.exists():
                 shutil.rmtree(target_assets_dir)
             shutil.copytree(source_assets_dir, target_assets_dir)
-            log.info("assets_copied", source=str(source_assets_dir), target=str(target_assets_dir))
+            log.info(
+                "assets_copied",
+                source=str(source_assets_dir),
+                target=str(target_assets_dir),
+            )
         else:
             log.info("assets_copy_skipped", reason="no_local_assets_found")
 
@@ -104,7 +108,9 @@ class LeetCodeDSAProblemMarkdownRender:
         log.info("variant_file_written", variant="local", path=str(output_file))
         return output_file
 
-    def _save_variant(self, record: CombinedQuestionRecord, variant: FV, root: Path) -> Path:
+    def _save_variant(
+        self, record: CombinedQuestionRecord, variant: FV, root: Path
+    ) -> Path:
         return (
             self._save_local(record, root)
             if variant == FV.LOCAL

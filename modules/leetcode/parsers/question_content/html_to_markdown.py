@@ -67,6 +67,8 @@ def html_to_markdown(raw_html: str | None) -> str:
         md = re.sub(r"\n{3,}", "\n\n", md)
 
         return md.strip()
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 — bs4/markdownify have no fixed
+        # exception surface for malformed HTML; any failure here should
+        # degrade to the raw HTML rather than break the whole sync.
         logger.warning("html_to_markdown_conversion_failed", error=str(exc))
         return raw_html

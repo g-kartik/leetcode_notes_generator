@@ -62,7 +62,11 @@ def gql_recent_ac_submissions(response_data: dict) -> list[dict]:
     parsed = []
     for item in raw_submissions:
         raw_timestamp = item.get("timestamp")
-        timestamp = datetime.fromtimestamp(int(raw_timestamp), tz=UTC) if raw_timestamp else None
+        timestamp = (
+            datetime.fromtimestamp(int(raw_timestamp), tz=UTC)
+            if raw_timestamp
+            else None
+        )
         parsed.append(
             {
                 "slug": item.get("titleSlug"),
@@ -79,7 +83,9 @@ def gql_submission_data(response_data: dict) -> dict:
     data = response_data.get("data", {}).get("submissionDetails", {})
 
     if not data:
-        logger.warning("submission_data_parse_empty", reason="no_submission_details_in_response")
+        logger.warning(
+            "submission_data_parse_empty", reason="no_submission_details_in_response"
+        )
         return {}
 
     lang = data.get("lang", {}).get("name", None)

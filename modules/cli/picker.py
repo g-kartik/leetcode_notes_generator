@@ -7,13 +7,15 @@ a searchable, multi-select prompt over whatever's known about each problem,
 so you never have to type a slug at all.
 """
 
-from InquirerPy import inquirer
 from InquirerPy.base.control import Choice
+from InquirerPy.inquirer import fuzzy
 
 from modules.leetcode.models import ProblemRecord
 from modules.leetcode.storage.combined import CombinedQuestionRecord
 
-PICK_MESSAGE = "Search a problem (type to filter, tab to multi-select, enter to confirm):"
+PICK_MESSAGE = (
+    "Search a problem (type to filter, tab to multi-select, enter to confirm):"
+)
 
 
 def pick_slugs(
@@ -35,7 +37,7 @@ def pick_slugs(
 
     choices = [Choice(value=slug, name=label) for slug, label in candidates]
     try:
-        result = inquirer.fuzzy(
+        result = fuzzy(
             message=message,
             choices=choices,
             multiselect=multiselect,

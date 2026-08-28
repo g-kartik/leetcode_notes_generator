@@ -63,7 +63,9 @@ class LeetCodeSyncManager:
         solved_problem_slugs = [p["slug"] for p in solved_problems if p["slug"]]
         solved_meta = {p["slug"]: p for p in solved_problems if p["slug"]}
         self.storage.refresh_pending_cache(solved_problem_slugs, meta=solved_meta)
-        log.info("solved_slugs_refresh_completed", fetched_count=len(solved_problem_slugs))
+        log.info(
+            "solved_slugs_refresh_completed", fetched_count=len(solved_problem_slugs)
+        )
 
         stale_submission_slugs = self.reconcile_recent_accepted()
 
@@ -127,7 +129,9 @@ class LeetCodeSyncManager:
             question_record.content.remote_markdown = parsers.html_to_markdown(
                 question_record.raw_question_html
             )
-            question_record.content.local_markdown = question_record.content.remote_markdown
+            question_record.content.local_markdown = (
+                question_record.content.remote_markdown
+            )
             question_record.content.local_html = question_record.raw_question_html
 
             self.storage.problems_add_or_update(question_record)
@@ -158,7 +162,9 @@ class LeetCodeSyncManager:
             existing_record = self.storage.problems_get_by_slug(slug)
 
             if not existing_record or not existing_record.raw_question_html:
-                logger.warning("images_fetch_skipped", reason="problem_metadata_missing")
+                logger.warning(
+                    "images_fetch_skipped", reason="problem_metadata_missing"
+                )
                 return False
 
             if existing_record.images_populated and not force_update:
@@ -222,7 +228,9 @@ class LeetCodeSyncManager:
             # reopened it because a fresher accepted submission was seen. That
             # should be refetched even without an explicit force_update.
             still_pending_in_cache = self.storage.is_part_pending(slug, "submission")
-            has_submission = existing_submission is not None and not still_pending_in_cache
+            has_submission = (
+                existing_submission is not None and not still_pending_in_cache
+            )
             if has_submission and not force_update:
                 logger.info(
                     "submission_already_populated",
@@ -237,7 +245,9 @@ class LeetCodeSyncManager:
             accepted_submission_id = self._get_accepted_submission_id(submission_list)
 
             if not accepted_submission_id:
-                logger.warning("submission_fetch_failed", reason="no_accepted_submission_found")
+                logger.warning(
+                    "submission_fetch_failed", reason="no_accepted_submission_found"
+                )
                 return False
 
             submission_details_result = self.client.get_submission_details(
@@ -286,7 +296,9 @@ class LeetCodeSyncManager:
         log.info("recent_accepted_fetch_completed", submission_count=len(submissions))
         return submissions
 
-    def list_recent_accepted(self, limit: int = 20, today_only: bool = False) -> list[dict]:
+    def list_recent_accepted(
+        self, limit: int = 20, today_only: bool = False
+    ) -> list[dict]:
         """
         Returns recently-accepted submissions as {slug, title, timestamp}
         dicts — the full recent-accepted batch by default, optionally
@@ -318,7 +330,10 @@ class LeetCodeSyncManager:
         for item in submissions:
             slug = item["slug"]
             existing_submission = self.storage.submissions_get_by_slug(slug)
-            if existing_submission is not None and existing_submission.submission_date < item["timestamp"]:
+            if (
+                existing_submission is not None
+                and existing_submission.submission_date < item["timestamp"]
+            ):
                 stale_submission_slugs.append(slug)
 
         for slug in stale_submission_slugs:

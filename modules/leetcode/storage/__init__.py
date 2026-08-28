@@ -10,7 +10,7 @@ from .submissions import SubmissionStorage
 
 logger = structlog.get_logger(__name__)
 
-__all__ = ["LeetCodeDSAStorage", "CombinedQuestionRecord"]
+__all__ = ["CombinedQuestionRecord", "LeetCodeDSAStorage"]
 
 
 class LeetCodeDSAStorage:
@@ -144,11 +144,15 @@ class LeetCodeDSAStorage:
     # Prefixed CRUD: submissions
     # -------------------------------------------------------------------
 
-    def submissions_add_or_update(self, record: SubmissionRecord | dict) -> SubmissionRecord:
+    def submissions_add_or_update(
+        self, record: SubmissionRecord | dict
+    ) -> SubmissionRecord:
         """Inserts or updates a submission record using its slug as the key."""
         return self.submissions.add_or_update(record)
 
-    def submissions_bulk_add_or_update(self, records: list[SubmissionRecord | dict]) -> int:
+    def submissions_bulk_add_or_update(
+        self, records: list[SubmissionRecord | dict]
+    ) -> int:
         """Batch inserts/updates submission records in a single disk I/O."""
         return self.submissions.bulk_add_or_update(records)
 
@@ -224,7 +228,9 @@ class LeetCodeDSAStorage:
         initial_state = {
             slug: self._actual_part_state(slug) for slug in slugs if slug not in tracked
         }
-        return self.cache.refresh_pending_cache(slugs, initial_state=initial_state, meta=meta)
+        return self.cache.refresh_pending_cache(
+            slugs, initial_state=initial_state, meta=meta
+        )
 
     def reconcile_pending_cache(self) -> int:
         """

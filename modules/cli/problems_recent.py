@@ -17,12 +17,18 @@ logger = structlog.get_logger(__name__)
 
 @problems.command("recent")
 @click.option(
-    "--today", "today_only", is_flag=True, default=False,
+    "--today",
+    "today_only",
+    is_flag=True,
+    default=False,
     help="Restrict to submissions accepted today (local time). Shows the full "
     "recent-accepted batch by default.",
 )
 @click.option(
-    "--limit", type=int, default=20, show_default=True,
+    "--limit",
+    type=int,
+    default=20,
+    show_default=True,
     help="How many recent accepted submissions to fetch from LeetCode.",
 )
 def problems_recent(today_only: bool, limit: int) -> None:
@@ -39,7 +45,11 @@ def problems_recent(today_only: bool, limit: int) -> None:
     click.echo(header)
     click.echo("-" * len(header))
     for item in submissions:
-        timestamp = item["timestamp"].isoformat(timespec="seconds") if item["timestamp"] else "-"
+        timestamp = (
+            item["timestamp"].isoformat(timespec="seconds")
+            if item["timestamp"]
+            else "-"
+        )
         click.echo(f"{item['slug']:<45}{item['title']:<40}{timestamp}")
 
     log.info("recent_command_completed", submission_count=len(submissions))

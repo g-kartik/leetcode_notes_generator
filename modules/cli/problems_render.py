@@ -17,11 +17,16 @@ logger = structlog.get_logger(__name__)
 @problems.command("render")
 @click.argument("slug", required=False)
 @click.option(
-    "--all", "run_all", is_flag=True,
+    "--all",
+    "run_all",
+    is_flag=True,
     help="Render every slug that already has problem data populated.",
 )
 @click.option(
-    "--output-base", "output_base", type=click.Path(path_type=Path), default=None,
+    "--output-base",
+    "output_base",
+    type=click.Path(path_type=Path),
+    default=None,
     help="Priority: this flag > OUTPUT_BASE_DIR (.env) > render_settings.DEFAULT_WRITE_DIR.",
 )
 def problems_render(
@@ -49,7 +54,9 @@ def problems_render(
             record = mgr.storage.get_combined_by_slug(slug)
             if record is None or not record.raw_question_html:
                 log.warning("render_command_skipped", reason="no_problem_data_stored")
-                raise click.ClickException(f"no problem data found for '{slug}', run 'problems data fetch {slug}' first")
+                raise click.ClickException(
+                    f"no problem data found for '{slug}', run 'problems data fetch {slug}' first"
+                )
             log.info("render_command_started")
             renderer.save(record)
             log.info("render_command_succeeded")
@@ -60,7 +67,9 @@ def problems_render(
 
     if not run_all:
         if not records:
-            click.echo("Nothing to pick from — no slugs have problem data populated yet.")
+            click.echo(
+                "Nothing to pick from — no slugs have problem data populated yet."
+            )
             return
         picked = pick_slugs(label_records(records))
         if not picked:
@@ -69,11 +78,17 @@ def problems_render(
         records = [r for r in records if r.slug in picked]
 
     if not records:
-        logger.info("render_command_batch_completed", stage="render", reason="no_problem_data_stored")
+        logger.info(
+            "render_command_batch_completed",
+            stage="render",
+            reason="no_problem_data_stored",
+        )
         click.echo("Nothing to render — no slugs have problem data populated yet.")
         return
 
-    logger.info("render_command_batch_started", stage="render", record_count=len(records))
+    logger.info(
+        "render_command_batch_started", stage="render", record_count=len(records)
+    )
     succeeded, failed = [], []
     for record in records:
         with structlog.contextvars.bound_contextvars(slug=record.slug, stage="render"):
