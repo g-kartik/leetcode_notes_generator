@@ -22,6 +22,77 @@ def get_manager() -> LeetCodeSyncManager:
     return _manager_instance
 
 
+# --------------------------------------------------------------------------- #
+# Per-part fetch status (used by `problems data fetch` and `notes render` —
+# anywhere that runs the description/images/submission pipeline parts and
+# needs to report, per part, whether it was already there, freshly fetched,
+# or failed, rather than one vague "fetching..." line).
+# --------------------------------------------------------------------------- #
+
+PART_METHODS = {
+    "description": "populate_question_metadata",
+    "images": "populate_question_images",
+    "submission": "populate_submission_code",
+}
+PART_ORDER = ("description", "images", "submission")
+
+
+def is_part_populated(mgr: LeetCodeSyncManager, part_name: str, slug: str) -> bool:
+    """Whether `part_name` already has data for `slug`, without touching the network."""
+    log = logger.bind(slug=slug, stage=part_name)
+
+    if part_name == "submission":
+        exists = mgr.storage.submissions_exists(slug)
+        # A submission can exist but still be cache-pending — e.g. reopened by
+        # reconcile_recent_accepted because a fresher accepted submission was seen.
+        reopened = mgr.storage.is_part_pending(slug, "submission")
+        found = exists and not reopened
+        log.info("part_populated_check", already_populated=found, exists=exists, reopened=reopened)
+        return found
+
+    record = mgr.storage.problems_get_by_slug(slug)
+    if record is None:
+        log.info("part_populated_check", already_populated=False, reason="no_problem_record_stored")
+        return False
+    if part_name == "description":
+        found = bool(record.raw_question_html)
+    elif part_name == "images":
+        # A question can legitimately have zero images (has_images=False,
+        # done) or have images that all failed to download so far
+        # (has_images=True, imgs_local_paths still empty, worth retrying) —
+        # images_populated tells the two apart instead of just checking
+        # imgs_local_paths truthiness.
+        found = record.images_populated
+    else:
+        raise ValueError(f"Unknown part: {part_name}")
+
+    log.info("part_populated_check", already_populated=found)
+    return found
+
+
+def run_part_for_slug(mgr: LeetCodeSyncManager, part_name: str, slug: str, refetch: bool) -> str:
+    """Runs one pipeline part for one slug. Returns 'skipped', 'success', or 'failed'."""
+    with structlog.contextvars.bound_contextvars(slug=slug, stage=part_name):
+        log = logger.bind()
+
+        if not refetch and is_part_populated(mgr, part_name, slug):
+            log.info("part_fetch_skipped", reason="already_populated_using_stored_data")
+            return "skipped"
+
+        log.info("part_fetch_started", refetch=refetch)
+        method = getattr(mgr, PART_METHODS[part_name])
+        succeeded = method(slug, force_update=refetch)
+
+        status = "success" if succeeded else "failed"
+        log.info("part_fetch_finished", status=status)
+        return status
+
+
+def describe_part_status(part_name: str, slug: str, status: str) -> str:
+    labels = {"success": "done", "skipped": "skip", "failed": "fail"}
+    return f"[{labels[status]:>4}] {part_name:<10} {slug}"
+
+
 class CircuitBreaker:
     """Trips after too many consecutive failures in a batch loop.
 

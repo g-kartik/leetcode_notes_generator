@@ -46,14 +46,23 @@ class LeetCodeSyncManager:
         least one populated part.
 
         Returns {"pending_slugs", "new_slugs", "stale_submission_slugs"}.
+
+        The complete-solved-list endpoint also carries id/title/difficulty
+        for every solved slug at no extra request cost — that's persisted
+        straight into the pending cache (PendingCacheStore.refresh_pending_cache's
+        `meta`) rather than returned here, so a picker built on
+        storage.read_pending_cache() can label a not-yet-fetched slug
+        consistently even without a live sync (e.g. offline).
         """
         log = logger.bind(stage="pending_sync")
         self.storage.reconcile_pending_cache()
         pending_before = set(self.storage.read_pending_cache().keys())
 
         log.info("solved_slugs_refresh_started")
-        solved_problem_slugs = self.client.get_solved_questions_slugs()
-        self.storage.refresh_pending_cache(solved_problem_slugs)
+        solved_problems = self.client.get_solved_questions()
+        solved_problem_slugs = [p["slug"] for p in solved_problems if p["slug"]]
+        solved_meta = {p["slug"]: p for p in solved_problems if p["slug"]}
+        self.storage.refresh_pending_cache(solved_problem_slugs, meta=solved_meta)
         log.info("solved_slugs_refresh_completed", fetched_count=len(solved_problem_slugs))
 
         stale_submission_slugs = self.reconcile_recent_accepted()

@@ -66,8 +66,17 @@ class LeetCodeClient:
             domain="leetcode.com",
         )
 
-    def get_solved_questions_slugs(self) -> list[str]:
-        """Fetches all solved problems ('ac' status) from the REST API endpoint."""
+    _DIFFICULTY_LEVELS = {1: "Easy", 2: "Medium", 3: "Hard"}
+
+    def get_solved_questions(self) -> list[dict]:
+        """Fetches all solved problems ('ac' status) from the REST API endpoint.
+
+        The same response already carries id/title/difficulty for every
+        problem (not just slug), at no extra request cost — pulling those
+        out here lets callers (e.g. the CLI picker) label a slug that's
+        solved on LeetCode but not yet fetched locally, without a per-slug
+        GraphQL round trip.
+        """
         url = self.settings.ENDPOINT_ALL_PROBLEMS
         logger.info("solved_questions_request_started", url=url)
 
@@ -81,18 +90,28 @@ class LeetCodeClient:
         data = response.json()
         raw_pairs = data.get("stat_status_pairs", [])
 
-        solved_problems_slugs = []
+        solved_problems = []
 
         for pair in raw_pairs:
-            if pair.get("status") == "ac":
-                slug = pair.get("stat").get("question__title_slug")
-                solved_problems_slugs.append(slug)
+            if pair.get("status") != "ac":
+                continue
+            stat = pair.get("stat") or {}
+            solved_problems.append(
+                {
+                    "slug": stat.get("question__title_slug"),
+                    "id": stat.get("frontend_question_id"),
+                    "title": stat.get("question__title"),
+                    "difficulty": self._DIFFICULTY_LEVELS.get(
+                        (pair.get("difficulty") or {}).get("level")
+                    ),
+                }
+            )
 
         logger.info(
             "solved_questions_request_succeeded",
-            solved_count=len(solved_problems_slugs),
+            solved_count=len(solved_problems),
         )
-        return solved_problems_slugs
+        return solved_problems
 
     def get_question_details(self, slug: str) -> dict:
         """Queries LeetCode's GraphQL API to get comprehensive metadata for a specific problem."""

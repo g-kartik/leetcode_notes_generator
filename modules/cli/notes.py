@@ -8,13 +8,16 @@ the personal study-notes file, for one slug or a whole batch. It replaces the
 old standalone `solve` command — that pipeline now lives here as
 `_generate_notes_for_slug`.
 
-`--recent`/`--today` scope a batch to LeetCode's recent-accepted-submissions
-feed instead of the local slug set, syncing from LeetCode first (new slugs
-solved since the last sync, plus reopening `submission` for anything
-resubmitted — see LeetCodeSyncManager.sync_pending_cache). A resubmitted
-slug's problem file is always re-rendered as part of this same pipeline,
-since populate_submission_code refetches automatically once the pending
-cache reopens that part — no separate "stale" handling needed here.
+Any batch/picker scope (i.e. SLUG omitted) syncs from LeetCode first — new
+slugs solved since the last sync, plus reopening `submission` for anything
+resubmitted (see LeetCodeSyncManager.sync_pending_cache) — so a slug that's
+solved but never locally fetched (including one whose local data was
+deleted) still shows up as a candidate. `--recent`/`--today` additionally
+scope that (already-synced) batch to LeetCode's recent-accepted-submissions
+feed instead of the local slug set. A resubmitted slug's problem file is
+always re-rendered as part of this same pipeline, since populate_submission_code
+refetches automatically once the pending cache reopens that part — no
+separate "stale" handling needed here.
 
 `notes prefill` remains a standalone way to generate AI prefill content
 without rendering anything yet.
@@ -24,6 +27,7 @@ import time
 from pathlib import Path
 
 import click
+import requests
 import structlog
 
 from modules.ai_prefill import AIPrefillGenerator, AIProviderError, PrefillGenerationError
@@ -34,7 +38,13 @@ from modules.render.markdown_problem import LeetCodeDSAProblemMarkdownRender
 from modules.render.settings import render_settings
 from modules.render.utils import AI_STYLE, NotesStyle
 
-from .common import CircuitBreaker, get_manager, print_batch_summary
+from .common import (
+    CircuitBreaker,
+    describe_part_status,
+    get_manager,
+    print_batch_summary,
+    run_part_for_slug,
+)
 from .picker import label_records, label_slugs, pick_slugs
 from .root import cli
 
@@ -51,33 +61,84 @@ def notes() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def _known_slug_candidates(mgr: LeetCodeSyncManager) -> list[tuple[str, str]]:
-    """(slug, label) pairs for every slug worth offering: still-pending ones,
-    plus everything already in the DB — re-running on an already-done slug is
-    a safe refresh, not an error, so it stays offered too."""
-    pending = set(mgr.storage.read_pending_cache().keys())
+def _sync_tags(sync_result: dict) -> dict[str, str]:
+    """slug -> "(new)"/"(updated)" for whatever the just-run sync discovered
+    or reopened, so the picker can flag them instead of leaving the user to
+    guess which pending slugs are actually fresh."""
+    tags = {slug: "(new)" for slug in sync_result["new_slugs"]}
+    tags.update({slug: "(updated)" for slug in sync_result["stale_submission_slugs"]})
+    return tags
+
+
+def _known_slug_candidates(mgr: LeetCodeSyncManager, sync_result: dict) -> list[tuple[str, str]]:
+    """(slug, label) pairs for every slug worth offering: still-pending ones
+    first (tagged "(new)"/"(updated)" where this sync found them so),
+    then everything already fully populated — re-running on an already-done
+    slug is a safe refresh, not an error, so it stays offered too.
+
+    Labeled consistently via label_slugs — a not-yet-fetched slug gets its
+    id/title/difficulty from the pending cache itself (PendingCacheStore
+    persists it there on every live sync — see
+    LeetCodeSyncManager.sync_pending_cache), not just a live sync's transient
+    result, so this stays fully labeled even when _sync_and_report degraded
+    to a local-only view (e.g. offline).
+    """
+    pending_cache = mgr.storage.read_pending_cache()
+    pending = set(pending_cache.keys())
     done = {r.slug for r in mgr.storage.list_all() if r.slug}
-    slugs = sorted(pending | done)
     known = {r.slug: r for r in mgr.storage.list_all() if r.slug}
-    return label_slugs(slugs, known)
+    ordered_slugs = sorted(pending) + sorted(done - pending)
+    return label_slugs(ordered_slugs, known, solved_meta=pending_cache, tags=_sync_tags(sync_result))
 
 
-def _sync_and_report(mgr: LeetCodeSyncManager) -> None:
+def _offline_sync_result(mgr: LeetCodeSyncManager) -> dict:
+    """Same shape as sync_pending_cache()'s return, built from local data only
+    — no new/stale detection, since that requires actually comparing against
+    LeetCode. Candidate labeling still works fully offline regardless (see
+    _known_slug_candidates), since id/title/difficulty live in the persisted
+    pending cache, not in this transient result."""
+    return {
+        "pending_slugs": list(mgr.storage.read_pending_cache().keys()),
+        "new_slugs": [],
+        "stale_submission_slugs": [],
+    }
+
+
+def _sync_and_report(mgr: LeetCodeSyncManager) -> dict:
+    """Runs sync_pending_cache(), reporting what it found. Falls back to a
+    local-only view (see _offline_sync_result) if LeetCode can't be reached
+    — e.g. offline — rather than blocking the picker entirely on a network
+    call it can't make; anything already fetched locally is still pickable."""
     click.echo("Syncing with LeetCode...")
-    result = mgr.sync_pending_cache()
+    try:
+        result = mgr.sync_pending_cache()
+    except requests.exceptions.RequestException as exc:
+        logger.warning("sync_and_report_offline_fallback", error=str(exc))
+        click.echo(f"  could not reach LeetCode ({exc.__class__.__name__}) — using local data only.")
+        return _offline_sync_result(mgr)
     click.echo(
         f"  {len(result['new_slugs'])} new slug(s) discovered, "
         f"{len(result['stale_submission_slugs'])} resubmission(s) detected."
     )
+    return result
 
 
-def _recent_scope_candidates(mgr: LeetCodeSyncManager, today_only: bool) -> list[tuple[str, str]]:
+def _recent_scope_candidates(
+    mgr: LeetCodeSyncManager, today_only: bool, sync_result: dict
+) -> list[tuple[str, str]]:
     """(slug, label) pairs scoped to LeetCode's recent-accepted-submissions
-    feed (~20 most recent, or just today's), after a live sync so brand-new
-    slugs and resubmits are picked up first."""
-    _sync_and_report(mgr)
+    feed (~20 most recent, or just today's), in the same label format as
+    every other picker. Assumes the caller already synced (see
+    _sync_and_report) — this itself still makes a live GraphQL call
+    (list_recent_accepted), so unlike _known_slug_candidates this scope has
+    no offline fallback."""
     items = mgr.list_recent_accepted(today_only=today_only)
-    return [(item["slug"], f"{item['title']}  ({item['slug']})") for item in items]
+    slugs = [item["slug"] for item in items]
+    known = {r.slug: r for r in mgr.storage.list_all() if r.slug}
+    pending_cache = mgr.storage.read_pending_cache()
+    return label_slugs(
+        slugs, known, solved_meta=pending_cache, tags=_sync_tags(sync_result)
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -102,13 +163,15 @@ def _generate_notes_for_slug(
     couldn't be fetched — nothing downstream can proceed without it."""
     log = logger.bind(slug=slug)
 
-    click.echo("  -> fetch description/images/submission")
-    mgr.populate_question_metadata(slug)
+    description_status = run_part_for_slug(mgr, "description", slug, refetch=False)
+    click.echo(f"  {describe_part_status('description', slug, description_status)}")
     record = mgr.storage.problems_get_by_slug(slug)
     if record is None or not record.raw_question_html:
         raise RuntimeError("could not fetch problem metadata")
-    mgr.populate_question_images(slug)
-    mgr.populate_submission_code(slug)
+
+    for part_name in ("images", "submission"):
+        status = run_part_for_slug(mgr, part_name, slug, refetch=False)
+        click.echo(f"  {describe_part_status(part_name, slug, status)}")
 
     combined = mgr.storage.get_combined_by_slug(slug)
 
@@ -249,10 +312,24 @@ def notes_render(
             click.echo(f"[{'done' if status == 'written' else 'skip'}] notes {slug}")
         return
 
+    # Always sync first when resolving a batch/picker scope (SLUG already
+    # returned above — a single explicit slug fetches directly and doesn't
+    # need the candidate list). Without this, a slug solved on LeetCode but
+    # never locally fetched (including one whose local data was deleted)
+    # wouldn't appear in the picker at all.
+    sync_result = _sync_and_report(mgr)
     if recent_scope or today_scope:
-        candidates = _recent_scope_candidates(mgr, today_only=today_scope)
+        # Unlike the default scope, --recent/--today has no local fallback —
+        # LeetCode's recent-accepted feed isn't cached anywhere, so this
+        # genuinely can't work offline.
+        try:
+            candidates = _recent_scope_candidates(mgr, today_only=today_scope, sync_result=sync_result)
+        except requests.exceptions.RequestException as exc:
+            raise click.ClickException(
+                f"could not reach LeetCode to fetch the recent-accepted feed: {exc}"
+            )
     else:
-        candidates = _known_slug_candidates(mgr)
+        candidates = _known_slug_candidates(mgr, sync_result)
 
     if not candidates:
         click.echo("Nothing to do — no slugs in scope.")

@@ -27,11 +27,19 @@ class PendingCacheStore:
             raise ValueError(f"Unknown part '{part}'. Must be one of {self.CACHE_PARTS}.")
 
     @classmethod
-    def _row_to_dict(cls, row: sqlite3.Row) -> dict[str, bool]:
-        return {part: bool(row[part]) for part in cls.CACHE_PARTS}
+    def _row_to_dict(cls, row: sqlite3.Row) -> dict:
+        data = {part: bool(row[part]) for part in cls.CACHE_PARTS}
+        data["id"] = row["id"]
+        data["title"] = row["title"]
+        data["difficulty"] = row["difficulty"]
+        return data
 
-    def read_pending_cache(self) -> dict[str, dict[str, bool]]:
-        """Returns the full pending cache: {slug: {description, images, submission}}."""
+    def read_pending_cache(self) -> dict[str, dict]:
+        """Returns the full pending cache: {slug: {description, images,
+        submission, id, title, difficulty}}. id/title/difficulty are
+        whatever was captured the last time a live sync saw this slug (see
+        refresh_pending_cache's `meta`) — None for a slug that's never been
+        through a sync with this column present."""
         rows = self.conn.execute("SELECT * FROM pending_cache").fetchall()
         cache = {row["slug"]: self._row_to_dict(row) for row in rows}
         logger.info("pending_cache_read", pending_count=len(cache))
@@ -46,10 +54,15 @@ class PendingCacheStore:
         self,
         slugs: list[str],
         initial_state: dict[str, dict[str, bool]] | None = None,
-    ) -> dict[str, dict[str, bool]]:
+        meta: dict[str, dict] | None = None,
+    ) -> dict[str, dict]:
         """
         Merges newly-fetched solved slugs into the cache. Slugs already
-        tracked keep their existing per-part progress.
+        tracked keep their existing per-part progress, but have their
+        id/title/difficulty refreshed from `meta` whenever it's given —
+        letting a row created before those columns existed (or with a
+        network hiccup on some earlier sync) self-heal on the next live
+        sync, instead of needing a one-off backfill.
 
         For a genuinely new slug, `initial_state` (if given) supplies its
         true per-part completion — e.g. reconstructed from existing
@@ -58,14 +71,28 @@ class PendingCacheStore:
         nothing has been fetched yet. A slug whose initial state already
         has every part complete is skipped entirely, matching
         `mark_part_fetched`'s drop-on-completion behavior.
+
+        `meta` (if given) is {slug: {"id", "title", "difficulty"}} — cheaply
+        available from the same bulk solved-questions fetch that produces
+        `slugs`. Persisting it here (rather than just handing it back to the
+        caller for one-time use) is what lets the CLI picker label a
+        not-yet-fetched slug consistently even offline, from
+        read_pending_cache() alone.
         """
         initial_state = initial_state or {}
+        meta = meta or {}
         existing = {row["slug"] for row in self.conn.execute("SELECT slug FROM pending_cache").fetchall()}
         newly_added = 0
         skipped_already_complete = 0
         with self.conn:
             for slug in slugs:
+                slug_meta = meta.get(slug) or {}
                 if slug in existing:
+                    if slug_meta:
+                        self.conn.execute(
+                            "UPDATE pending_cache SET id = ?, title = ?, difficulty = ? WHERE slug = ?",
+                            (slug_meta.get("id"), slug_meta.get("title"), slug_meta.get("difficulty"), slug),
+                        )
                     continue
                 state = initial_state.get(slug)
                 if state and all(state.get(part, False) for part in self.CACHE_PARTS):
@@ -73,8 +100,18 @@ class PendingCacheStore:
                     continue
                 values = {part: bool(state.get(part, False)) if state else False for part in self.CACHE_PARTS}
                 self.conn.execute(
-                    "INSERT INTO pending_cache (slug, description, images, submission) VALUES (?, ?, ?, ?)",
-                    (slug, values["description"], values["images"], values["submission"]),
+                    "INSERT INTO pending_cache "
+                    "(slug, id, title, difficulty, description, images, submission) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        slug,
+                        slug_meta.get("id"),
+                        slug_meta.get("title"),
+                        slug_meta.get("difficulty"),
+                        values["description"],
+                        values["images"],
+                        values["submission"],
+                    ),
                 )
                 existing.add(slug)
                 newly_added += 1

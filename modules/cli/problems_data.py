@@ -6,78 +6,19 @@ import structlog
 
 from modules.sync.pipeline import LeetCodeSyncManager
 
-from .common import BatchPacer, CircuitBreaker, get_manager, print_batch_summary
+from .common import (
+    PART_ORDER,
+    BatchPacer,
+    CircuitBreaker,
+    describe_part_status,
+    get_manager,
+    print_batch_summary,
+    run_part_for_slug,
+)
 from .picker import label_slugs, pick_slugs
 from .problems import problems
 
 logger = structlog.get_logger(__name__)
-
-# --------------------------------------------------------------------------- #
-# Shared part info (used by `fetch` and its batch-resolution helpers)
-# --------------------------------------------------------------------------- #
-
-_PART_METHODS = {
-    "description": "populate_question_metadata",
-    "images": "populate_question_images",
-    "submission": "populate_submission_code",
-}
-_PART_ORDER = ("description", "images", "submission")
-
-
-def _is_populated(mgr: LeetCodeSyncManager, part_name: str, slug: str) -> bool:
-    """Whether `part_name` already has data for `slug`, without touching the network."""
-    log = logger.bind(slug=slug, stage=part_name)
-
-    if part_name == "submission":
-        exists = mgr.storage.submissions_exists(slug)
-        # A submission can exist but still be cache-pending — e.g. reopened by
-        # reconcile_recent_accepted because a fresher accepted submission was seen.
-        reopened = mgr.storage.is_part_pending(slug, "submission")
-        found = exists and not reopened
-        log.info("part_populated_check", already_populated=found, exists=exists, reopened=reopened)
-        return found
-
-    record = mgr.storage.problems_get_by_slug(slug)
-    if record is None:
-        log.info("part_populated_check", already_populated=False, reason="no_problem_record_stored")
-        return False
-    if part_name == "description":
-        found = bool(record.raw_question_html)
-    elif part_name == "images":
-        # A question can legitimately have zero images (has_images=False,
-        # done) or have images that all failed to download so far
-        # (has_images=True, imgs_local_paths still empty, worth retrying) —
-        # images_populated tells the two apart instead of just checking
-        # imgs_local_paths truthiness.
-        found = record.images_populated
-    else:
-        raise ValueError(f"Unknown part: {part_name}")
-
-    log.info("part_populated_check", already_populated=found)
-    return found
-
-
-def _run_part_for_slug(mgr: LeetCodeSyncManager, part_name: str, slug: str, refetch: bool) -> str:
-    """Runs one pipeline part for one slug. Returns 'skipped', 'success', or 'failed'."""
-    with structlog.contextvars.bound_contextvars(slug=slug, stage=part_name):
-        log = logger.bind()
-
-        if not refetch and _is_populated(mgr, part_name, slug):
-            log.info("part_fetch_skipped", reason="already_populated_using_stored_data")
-            return "skipped"
-
-        log.info("part_fetch_started", refetch=refetch)
-        method = getattr(mgr, _PART_METHODS[part_name])
-        succeeded = method(slug, force_update=refetch)
-
-        status = "success" if succeeded else "failed"
-        log.info("part_fetch_finished", status=status)
-        return status
-
-
-def _describe(part_name: str, slug: str, status: str) -> str:
-    labels = {"success": "done", "skipped": "skip", "failed": "fail"}
-    return f"[{labels[status]:>4}] {part_name:<10} {slug}"
 
 
 def _resolve_part_batch_slugs(mgr: LeetCodeSyncManager, part_name: str, no_cache: bool) -> list[str]:
@@ -172,8 +113,8 @@ def _run_single_part(
     batch_size: int,
 ) -> None:
     if slug:
-        status = _run_part_for_slug(mgr, part_name, slug, refetch)
-        click.echo(_describe(part_name, slug, status))
+        status = run_part_for_slug(mgr, part_name, slug, refetch)
+        click.echo(describe_part_status(part_name, slug, status))
         if status == "failed":
             raise click.ClickException(f"could not fetch '{part_name}' for '{slug}' — no data returned")
         return
@@ -196,8 +137,8 @@ def _run_single_part(
     pacer = BatchPacer(batch_size)
     total = len(slugs)
     for idx, target_slug in enumerate(slugs):
-        status = _run_part_for_slug(mgr, part_name, target_slug, refetch)
-        click.echo(_describe(part_name, target_slug, status))
+        status = run_part_for_slug(mgr, part_name, target_slug, refetch)
+        click.echo(describe_part_status(part_name, target_slug, status))
         buckets[status].append(target_slug)
 
         breaker.record(status == "failed")
@@ -230,9 +171,9 @@ def _run_full(
 ) -> None:
     if slug:
         failed_parts = []
-        for part_name in _PART_ORDER:
-            status = _run_part_for_slug(mgr, part_name, slug, refetch)
-            click.echo(_describe(part_name, slug, status))
+        for part_name in PART_ORDER:
+            status = run_part_for_slug(mgr, part_name, slug, refetch)
+            click.echo(describe_part_status(part_name, slug, status))
             if status == "failed":
                 failed_parts.append(part_name)
         if failed_parts:
@@ -257,9 +198,9 @@ def _run_full(
     total = len(slugs)
     for idx, target_slug in enumerate(slugs):
         slug_failed = False
-        for part_name in _PART_ORDER:
-            status = _run_part_for_slug(mgr, part_name, target_slug, refetch)
-            click.echo(_describe(part_name, target_slug, status))
+        for part_name in PART_ORDER:
+            status = run_part_for_slug(mgr, part_name, target_slug, refetch)
+            click.echo(describe_part_status(part_name, target_slug, status))
             slug_failed = slug_failed or status == "failed"
         (failed if slug_failed else succeeded).append(target_slug)
 

@@ -176,8 +176,9 @@ class LeetCodeDSAStorage:
     # Solved-slugs pending cache (unchanged behavior, delegated to PendingCacheStore)
     # -------------------------------------------------------------------
 
-    def read_pending_cache(self) -> dict[str, dict[str, bool]]:
-        """Returns the full pending cache: {slug: {description, images, submission}}."""
+    def read_pending_cache(self) -> dict[str, dict]:
+        """Returns the full pending cache: {slug: {description, images,
+        submission, id, title, difficulty}}."""
         return self.cache.read_pending_cache()
 
     def get_pending_slugs(self) -> list[str]:
@@ -204,7 +205,9 @@ class LeetCodeDSAStorage:
             "submission": self.submissions.exists(slug),
         }
 
-    def refresh_pending_cache(self, slugs: list[str]) -> dict[str, dict[str, bool]]:
+    def refresh_pending_cache(
+        self, slugs: list[str], meta: dict[str, dict] | None = None
+    ) -> dict[str, dict]:
         """
         Merges newly-fetched solved slugs into the cache, preserving existing
         per-part progress. For slugs not already tracked, reconstructs true
@@ -212,12 +215,16 @@ class LeetCodeDSAStorage:
         a problem already fully synced in problems.json/submissions.json —
         e.g. after the pending cache was reset or rebuilt — isn't re-flagged
         as fully pending) and skips adding it if every part is already done.
+
+        `meta` (if given), {slug: {"id", "title", "difficulty"}}, is
+        persisted alongside each pending slug — see
+        PendingCacheStore.refresh_pending_cache.
         """
         tracked = self.cache.read_pending_cache()
         initial_state = {
             slug: self._actual_part_state(slug) for slug in slugs if slug not in tracked
         }
-        return self.cache.refresh_pending_cache(slugs, initial_state=initial_state)
+        return self.cache.refresh_pending_cache(slugs, initial_state=initial_state, meta=meta)
 
     def reconcile_pending_cache(self) -> int:
         """

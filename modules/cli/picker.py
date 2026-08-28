@@ -60,19 +60,44 @@ def label_records(records: list[CombinedQuestionRecord]) -> list[tuple[str, str]
     ]
 
 
-def label_slugs(slugs: list[str], known: dict[str, ProblemRecord]) -> list[tuple[str, str]]:
+def label_slugs(
+    slugs: list[str],
+    known: dict[str, ProblemRecord],
+    *,
+    solved_meta: dict[str, dict] | None = None,
+    tags: dict[str, str] | None = None,
+) -> list[tuple[str, str]]:
     """
     (slug, label) pairs for bare slugs that may or may not have problem data
-    yet (e.g. solved-but-not-yet-fetched slugs from the pending cache) — best
-    best-effort title-based label where `known` has a record, otherwise the
-    slug itself is still perfectly searchable on its own (LeetCode slugs are
-    just the title in kebab-case).
+    yet (e.g. solved-but-not-yet-fetched slugs from the pending cache) —
+    labeled in the same "<id>  <title>  (<difficulty>)" format as
+    label_records, so the picker never mixes formats.
+
+    Prefers a local DB record (`known`) when one exists; otherwise falls back
+    to `solved_meta` — id/title/difficulty per slug, e.g. straight from
+    storage.read_pending_cache() (PendingCacheStore persists this on every
+    live sync — see LeetCodeSyncManager.sync_pending_cache), so a slug
+    that's solved but never locally fetched still gets a real label instead
+    of the bare slug, even without a live sync (offline included). Only
+    when neither source has anything for a slug does the label fall back to
+    the bare slug — still searchable on its own, since LeetCode slugs are
+    just the title in kebab-case.
+
+    `tags`, if given, appends e.g. "(new)"/"(updated)" after the difficulty
+    for slugs a just-run sync discovered/reopened.
     """
+    solved_meta = solved_meta or {}
+    tags = tags or {}
     labels = []
     for slug in slugs:
         record = known.get(slug)
+        meta = solved_meta.get(slug)
         if record and record.title:
-            labels.append((slug, f"{record.id or 0:>4}  {record.title}  ({record.difficulty or '?'})"))
+            base = f"{record.id or 0:>4}  {record.title}  ({record.difficulty or '?'})"
+        elif meta and meta.get("title"):
+            base = f"{meta.get('id') or 0:>4}  {meta['title']}  ({meta.get('difficulty') or '?'})"
         else:
-            labels.append((slug, slug))
+            base = slug
+        tag = tags.get(slug)
+        labels.append((slug, f"{base} {tag}" if tag else base))
     return labels
