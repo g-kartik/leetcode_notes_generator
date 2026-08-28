@@ -32,15 +32,17 @@ pluggable AI provider. Driven by a `click`-based CLI (`cli.py`).
 
 ## Configuration
 
-Settings are `pydantic-settings` classes reading from two root env files, loaded in order
-with later values winning: `.env.defaults` (committed — every non-secret setting's shipped
-default) then `.env` (gitignored — real secrets, i.e. `LEETCODE_SESSION`/`LEETCODE_CSRF_TOKEN`,
-plus any personal override of a default; see `.env.example` for what to copy into it).
-`settings.py` (repo root) defines `BaseProjectSettings`, which fixes `PROJECT_ROOT_DIR` and
-that `env_file` tuple. Every module-level settings class subclasses it and adds its own
-`env_prefix` — each one that redeclares `model_config` to do so must repeat the `env_file`
-tuple too, since pydantic merges `model_config` per-key across the class hierarchy rather than
-composing a subclass's dict with its parent's:
+Settings are `pydantic-settings` classes reading from a single root `.env` file (gitignored —
+see `.env.example` for every field; it's a template only, never loaded at runtime). Every field
+already has a sensible default baked into its settings class, so `.env` only needs an entry for
+a value you're actually overriding on this machine/account — secrets
+(`LEETCODE_SESSION`/`LEETCODE_CSRF_TOKEN`) included, since there's nowhere else they could go,
+but also anything else that's genuinely personal/machine-specific (e.g. `OUTPUT_BASE_DIR`).
+Don't add a project-wide default to a committed file — if a default is worth changing for
+everyone, change the field's default in its settings class instead, like any other code change.
+`settings.py` (repo root) defines `BaseProjectSettings`, which fixes `PROJECT_ROOT_DIR` and the
+shared `model_config`. Every module-level settings class subclasses it and adds its own
+`env_prefix`:
 
 - `modules/leetcode/settings.py` — `LeetCodeSettings` (`env_prefix="LEETCODE_"`): auth
   (`SESSION`, `CSRF_TOKEN` cookies copied from an authenticated browser session against
