@@ -132,3 +132,88 @@ def problems_delete(slug: str | None, skip_confirm: bool) -> None:
             click.echo(f"[fail] {target_slug}: not found")
             failed.append(target_slug)
     print_batch_summary(succeeded, failed)
+
+
+def _pick_submission_slugs(mgr) -> list[str]:
+    """Interactive multi-select fallback over every stored slug that has a submission."""
+    records = [r for r in mgr.storage.list_all_combined() if r.submission is not None]
+    if not records:
+        click.echo("Nothing to pick from — no stored submissions.")
+        return []
+    picked = pick_slugs(label_records(records))
+    if not picked:
+        click.echo("Nothing selected.")
+    return picked
+
+
+def _delete_submission_one(mgr, slug: str) -> bool:
+    with structlog.contextvars.bound_contextvars(slug=slug, stage="problems"):
+        logger.info("problems_delete_submission_command_started")
+        deleted = mgr.storage.submissions_delete(slug)
+        if deleted:
+            mgr.storage.reopen_part(slug, "submission")
+        else:
+            logger.info(
+                "problems_delete_submission_command_skipped", reason="not_found"
+            )
+        return deleted
+
+
+@problems.command("delete-submission")
+@click.argument("slug", required=False)
+@click.option(
+    "--all",
+    "run_all",
+    is_flag=True,
+    help="Delete the stored submission for every slug that has one.",
+)
+@click.option("--skip-confirm", is_flag=True, help="Skip the confirmation prompt.")
+def problems_delete_submission(
+    slug: str | None, run_all: bool, skip_confirm: bool
+) -> None:
+    """Delete the stored submission (code) for one or more problems, leaving
+    the rest of the problem record (description, images) intact. Reopens the
+    'submission' part in the pending cache so a later fetch/render re-pulls it
+    if an accepted submission still exists on LeetCode. Destructive — asks to
+    confirm unless --skip-confirm. Omit both SLUG and --all to pick
+    interactively instead — a searchable, multi-select prompt over every slug
+    with a stored submission."""
+    if slug and run_all:
+        raise click.UsageError("Pass either SLUG or --all, not both.")
+
+    mgr = get_manager()
+
+    if slug:
+        if not skip_confirm:
+            click.confirm(
+                f"Delete the stored submission for '{slug}'? This cannot be undone.",
+                abort=True,
+            )
+        if not _delete_submission_one(mgr, slug):
+            raise click.ClickException(f"'{slug}' has no stored submission.")
+        click.echo(f"Deleted submission for '{slug}'.")
+        return
+
+    if run_all:
+        slugs = [r.slug for r in mgr.storage.submissions_list_all() if r.slug]
+        if not slugs:
+            click.echo("Nothing to do — no stored submissions.")
+            return
+    else:
+        slugs = _pick_submission_slugs(mgr)
+        if not slugs:
+            return
+
+    if not skip_confirm:
+        click.echo(f"About to delete {len(slugs)} submission(s): {', '.join(slugs)}")
+        click.confirm("This cannot be undone. Continue?", abort=True)
+
+    succeeded, failed = [], []
+    for target_slug in slugs:
+        if _delete_submission_one(mgr, target_slug):
+            click.echo(f"[done] deleted submission for {target_slug}")
+            succeeded.append(target_slug)
+        else:
+            click.echo(f"[fail] {target_slug}: no stored submission")
+            failed.append(target_slug)
+    print_batch_summary(succeeded, failed)
