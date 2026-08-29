@@ -68,7 +68,7 @@ class LeetCodeClient:
             domain="leetcode.com",
         )
 
-    _DIFFICULTY_LEVELS: ClassVar[dict[int, str]] = {1: "Easy", 2: "Medium", 3: "Hard"}
+    _DIFFICULTY_LEVELS: ClassVar[dict[int, str]] = {0: "Unknown", 1: "Easy", 2: "Medium", 3: "Hard"}
 
     def get_solved_questions(self) -> list[dict]:
         """Fetches all solved problems ('ac' status) from the REST API endpoint.
@@ -104,7 +104,7 @@ class LeetCodeClient:
                     "id": stat.get("frontend_question_id"),
                     "title": stat.get("question__title"),
                     "difficulty": self._DIFFICULTY_LEVELS.get(
-                        (pair.get("difficulty") or {}).get("level")
+                        (pair.get("difficulty") or {}).get("level", 0)
                     ),
                 }
             )
